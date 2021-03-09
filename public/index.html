@@ -7,24 +7,53 @@
         * {
             box-sizing: border-box;
         }
+        :root {
+            --spacing: 8px;
+            --main-color: #43A047;
+        }
         body {
+            background: white;
             margin: 0;
             font-family: sans-serif;
             font-size: 16px;
         }
+        header {
+            display: flex;
+            align-items: center;
+            margin-bottom: calc(var(--spacing) * 2);
+        }
+        svg {
+            fill: var(--main-color);
+        }
+        .container {
+            max-width: 80%;
+            margin: calc(var(--spacing) * 2) auto;
+        }
         form {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: calc(var(--spacing) * 2);
         }
         fieldset {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: calc(var(--spacing) * 2);
+            margin: 0;
+            padding: 0px 0px calc(var(--spacing) * 2) 0px;
+            border-top: none;
+            border-right: none;
+            border-left: none;
+            border-bottom: 1px solid gray;
+        }
+        legend {
+            font-size: 1.728rem; /* h2 */
+            padding: 0;
+            line-height: 1.25;
+            margin-bottom: calc(var(--spacing) * 2);
         }
         section {
             display: flex;
-            gap: 16px;
+            gap: calc(var(--spacing) * 2);
         }
         label {
             flex: 1;
@@ -32,75 +61,127 @@
         }
         input {
             width: 100%;
-            margin-top: 8px;
+            margin-top: calc(var(--spacing) * 1);
+        }
+        select {
+            margin-left: calc(var(--spacing) * 1);
+            border: 1px solid var(--main-color);
+            background-color: white;
+            border-radius: 4px;
+        }
+        input, select {
             padding: 8px;
+        }
+        button[type="submit"] {
+            padding: calc(var(--spacing) * 2);
+            background-color: var(--main-color);
+            color: white;
+            border: none;
+            text-transform: uppercase;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        /**
+         * Typography based on modular scale factor of 1.2,
+         * also known as the Minor Third.
+         * @see {@link https://www.modularscale.com/?16&px&1.2}
+         */
+        h1 {
+            font-size: 2.074rem;
+        }
+        h2 {
+            font-size: 1.728rem;
+        }
+        h3 {
+            font-size: 1.44rem;
+        }
+        h4 {
+            font-size: 1.2rem;
+        }
+        h5 {
+            font-size: 1rem;
+        }
+        h6 {
+            font-size: 0.833rem;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            line-height: 1.25;
+            margin: 0;
         }
     </style>
 </head>
 <body>
-    <h1>OpenAFPM CAD Visualization</h1>
-    <form>
-        <label>
-            Wind Turbine
-            <select name="Variant">
-                <option value="T Shape">T Shape</option>
-                <option value="H Shape">H Shape</option>
-                <option value="Star Shape">Star Shape</option>
-            </select>
-        </label>
-        <fieldset>
-            <legend>MagnAFPM</legend>
-            <section>
+    <div class="container">
+        <header>
+            <svg alt="Wind Turbine" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" height="2.488rem" fill="#2196F3" version="1.1" x="0px" y="0px" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><g><path d="M317.027,177.958c-32.982,0-62.777,3.344-84.151,8.718c-6.516-10.781-18.077-18.155-31.405-18.905   c-5.828-21.437-18.077-49.779-35.092-79.247c-32.53-56.31-70.122-95.496-83.996-87.466c-13.874,8,1.219,60.154,33.749,116.465   c16.546,28.687,34.42,52.904,49.81,68.716c-3.75,6.031-5.921,13.125-5.921,20.718c0,7.125,1.89,13.781,5.203,19.531   c-15.218,15.843-32.812,39.748-49.091,67.974c-32.53,56.312-47.623,108.465-33.749,116.465   c13.875,8.03,51.466-31.124,83.996-87.435c16.499-28.594,28.499-56.1,34.529-77.317c13.578-0.563,25.358-8,31.967-18.905   c21.375,5.375,51.169,8.718,84.151,8.718c65.028,0,117.744-13,117.744-29.03C434.771,190.958,382.056,177.958,317.027,177.958z"/><path d="M218.048,265.643c-7.328,21.068-18.608,45.1-32.452,69.1c-7.187,12.438-14.812,24.404-22.546,35.404l-4.75,141.839h78.512   l-8.406-250.749C225.11,263.018,221.642,264.518,218.048,265.643z"/></g></svg>
+            <h1>OpenAFPM CAD Visualization</h1>
+        </header>
+        <main>
+            <form>
                 <label>
-                    RotorDiskRadius
-                    <input type="text" name="RotorDiskRadius">
+                    Wind Turbine
+                    <select name="Variant">
+                        <option value="T Shape">T Shape</option>
+                        <option value="H Shape">H Shape</option>
+                        <option value="Star Shape">Star Shape</option>
+                    </select>
                 </label>
-                <label>
-                    DiskThickness
-                    <input type="text" name="DiskThickness">
-                </label>
-            </section>
-            <section>
-                <label>
-                    MagnetLength
-                    <input type="text" name="MagnetLength">
-                </label>
-                <label>
-                    MagnetThickness
-                    <input type="text" name="MagnetThickness">
-                </label>
-                <label>
-                    NumberMagnet
-                    <input type="text" name="NumberMagnet">
-                </label>
-            </section>
-            <section>
-                <label>
-                    StatorThickness
-                    <input type="text" name="StatorThickness">
-                </label>
-                <label>
-                    MechanicalClearance
-                    <input type="text" name="MechanicalClearance">
-                </label>
-            </section>
-            <section>
-                <label>
-                    CoilLegWidth
-                    <input type="text" name="CoilLegWidth">
-                </label>
-                <label>
-                    CoilInnerWidth1
-                    <input type="text" name="CoilInnerWidth1">
-                </label>
-                <label>
-                    CoilInnerWidth2
-                    <input type="text" name="CoilInnerWidth2">
-                </label>
-            </section>
-        </fieldset>
-        <button type="submit">Visualize</button>
-    </form>
+                <fieldset>
+                    <legend>MagnAFPM</legend>
+                    <section>
+                        <label>
+                            Rotor Disk Radius
+                            <input type="text" name="RotorDiskRadius">
+                        </label>
+                        <label>
+                            Disk Thickness
+                            <input type="text" name="DiskThickness">
+                        </label>
+                    </section>
+                    <section>
+                        <label>
+                            Magnet Length
+                            <input type="text" name="MagnetLength">
+                        </label>
+                        <label>
+                            Magnet Thickness
+                            <input type="text" name="MagnetThickness">
+                        </label>
+                        <label>
+                            Number Magnet
+                            <input type="text" name="NumberMagnet">
+                        </label>
+                    </section>
+                    <section>
+                        <label>
+                            Stator Thickness
+                            <input type="text" name="StatorThickness">
+                        </label>
+                        <label>
+                            Mechanical Clearance
+                            <input type="text" name="MechanicalClearance">
+                        </label>
+                    </section>
+                    <section>
+                        <label>
+                            Coil Leg Width
+                            <input type="text" name="CoilLegWidth">
+                        </label>
+                        <label>
+                            Coil Inner Width 1
+                            <input type="text" name="CoilInnerWidth1">
+                        </label>
+                        <label>
+                            Coil Inner Width 2
+                            <input type="text" name="CoilInnerWidth2">
+                        </label>
+                    </section>
+                </fieldset>
+                <button type="submit">Visualize</button>
+            </form>
+        </main>
+    </div>
     <!-- <script src="openafpm-cad-visualization.js"></script> -->
     <script>
         // const windTurbineVisualization = new OpenAfpmCadVisualization({
