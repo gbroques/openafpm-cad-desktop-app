@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>OpenAFPM CAD Visualization</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            font-family: sans-serif;
+            font-size: 16px;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        fieldset {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        section {
+            display: flex;
+            gap: 16px;
+        }
+        label {
+            flex: 1;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            margin-top: 8px;
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>OpenAFPM CAD Visualization</h1>
+    <form>
+        <label>
+            Wind Turbine
+            <select name="Variant">
+                <option value="T Shape">T Shape</option>
+                <option value="H Shape">H Shape</option>
+                <option value="Star Shape">Star Shape</option>
+            </select>
+        </label>
+        <fieldset>
+            <legend>MagnAFPM</legend>
+            <section>
+                <label>
+                    RotorDiskRadius
+                    <input type="text" name="RotorDiskRadius">
+                </label>
+                <label>
+                    DiskThickness
+                    <input type="text" name="DiskThickness">
+                </label>
+            </section>
+            <section>
+                <label>
+                    MagnetLength
+                    <input type="text" name="MagnetLength">
+                </label>
+                <label>
+                    MagnetThickness
+                    <input type="text" name="MagnetThickness">
+                </label>
+                <label>
+                    NumberMagnet
+                    <input type="text" name="NumberMagnet">
+                </label>
+            </section>
+            <section>
+                <label>
+                    StatorThickness
+                    <input type="text" name="StatorThickness">
+                </label>
+                <label>
+                    MechanicalClearance
+                    <input type="text" name="MechanicalClearance">
+                </label>
+            </section>
+            <section>
+                <label>
+                    CoilLegWidth
+                    <input type="text" name="CoilLegWidth">
+                </label>
+                <label>
+                    CoilInnerWidth1
+                    <input type="text" name="CoilInnerWidth1">
+                </label>
+                <label>
+                    CoilInnerWidth2
+                    <input type="text" name="CoilInnerWidth2">
+                </label>
+            </section>
+        </fieldset>
+        <button type="submit">Visualize</button>
+    </form>
+    <!-- <script src="openafpm-cad-visualization.js"></script> -->
+    <script>
+        // const windTurbineVisualization = new OpenAfpmCadVisualization({
+        //     objUrl: 'wind-turbine.obj',
+        //     rootDomElement: window.document.body,
+        //     width: window.innerWidth,
+        //     height: window.innerHeight
+        // });
+        // window.addEventListener('resize', () => {
+        //     windTurbineVisualization.resize(window.innerWidth, window.innerHeight)
+        // }, false);
+        // window.addEventListener('mousemove', (e) => {
+        //     windTurbineVisualization.handleMouseMove(e)
+        // }, false);
+    </script>
+</body>
+</html>

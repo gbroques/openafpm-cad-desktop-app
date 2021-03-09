@@ -1,0 +1,19 @@
+{
+  "name": "openafpm-cad-desktop-app",
+  "version": "1.0.0",
+  "description": "Desktop application to visualize wind turbine designs.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "G Roques",
+  "license": "LGPL-2.1-or-later",
+  "dependencies": {
+    "express": "^4.17.1",
+    "openafpm-cad-visualization": "git+https://github.com/gbroques/openafpm-cad-visualization.git#e02256cfa3ab21f4d479ff05770d87877e84f8a9"
+  },
+  "devDependencies": {
+    "electron": "^12.0.0"
+  }
+}
