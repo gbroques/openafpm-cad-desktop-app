@@ -83,6 +83,12 @@
             border-radius: 4px;
             box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.30);
         }
+        button[type="submit"]:disabled {
+            background-color: #e0e0e0;
+            color: #a6a6a6;
+            box-shadow: none;
+            cursor: default;
+        }
         /**
          * Typography based on modular scale factor of 1.2,
          * also known as the Minor Third.
@@ -119,7 +125,7 @@
             <h1>OpenAFPM CAD Visualization</h1>
         </header>
         <main>
-            <form>
+            <form action="visualize" method="POST">
                 <label>
                     Wind Turbine
                     <select name="Variant">
@@ -441,6 +447,24 @@
         const state = {
             selectedVariant: defaultVariant
         };
+        function handleSubmit(event) {
+            event.preventDefault();
+            const submitterTextContent = event.submitter.textContent;
+            event.submitter.textContent = 'Loading...';
+            event.submitter.disabled = true;
+            console.log('event', event)
+            fetch(event.target.action, {
+                body: new URLSearchParams(new FormData(event.target)),
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                method: event.target.method
+            }).then(() => {
+                event.submitter.textContent = submitterTextContent;
+                event.submitter.disabled = false;
+            }).catch(console.error);
+        }
+        form.addEventListener('submit', handleSubmit);
         populateForm(form, state.selectedVariant);
         function populateForm(form, selectedVariant) {
             const parameters = parametersByVariant[selectedVariant];
