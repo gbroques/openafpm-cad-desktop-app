@@ -301,20 +301,23 @@
             </form>
         </main>
     </div>
-    <!-- <script src="openafpm-cad-visualization.js"></script> -->
+    <script src="openafpm-cad-visualization.js"></script>
     <script>
-        // const windTurbineVisualization = new OpenAfpmCadVisualization({
-        //     objUrl: 'wind-turbine.obj',
-        //     rootDomElement: window.document.body,
-        //     width: window.innerWidth,
-        //     height: window.innerHeight
-        // });
-        // window.addEventListener('resize', () => {
-        //     windTurbineVisualization.resize(window.innerWidth, window.innerHeight)
-        // }, false);
-        // window.addEventListener('mousemove', (e) => {
-        //     windTurbineVisualization.handleMouseMove(e)
-        // }, false);
+        function loadObj(objUrl) {
+            const windTurbineVisualization = new OpenAfpmCadVisualization({
+                objUrl,
+                rootDomElement: window.document.body,
+                width: window.innerWidth,
+                height: window.innerHeight
+            });
+            window.addEventListener('resize', () => {
+                windTurbineVisualization.resize(window.innerWidth, window.innerHeight)
+            }, false);
+            window.addEventListener('mousemove', (e) => {
+                windTurbineVisualization.handleMouseMove(e)
+            }, false);
+        }
+
         const WindTurbine = {
             T_SHAPE: 'T Shape',
             H_SHAPE: 'H Shape',
@@ -452,16 +455,19 @@
             const submitterTextContent = event.submitter.textContent;
             event.submitter.textContent = 'Loading...';
             event.submitter.disabled = true;
-            console.log('event', event)
             fetch(event.target.action, {
                 body: new URLSearchParams(new FormData(event.target)),
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 method: event.target.method
-            }).then(() => {
+            })
+            .then(r => r.json())
+            .then(response => {
                 event.submitter.textContent = submitterTextContent;
                 event.submitter.disabled = false;
+                const {objUrl} = response;
+                // loadObj(objUrl);
             }).catch(console.error);
         }
         form.addEventListener('submit', handleSubmit);

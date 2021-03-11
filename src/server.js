@@ -56,18 +56,19 @@ app.use('/visualize', (req, res) => {
     const json = JSON.stringify(parameterByGroup);
     const filepath = path.join(__dirname, 'parameters.json');
     fs.writeFileSync(filepath, json);
-    visualize().then(stdout => {
-        console.log(stdout);
-        res.status(200).send();
+    const filename = 'wind-turbine.obj';
+    const objFilepath = path.join(__dirname, '..', 'public', filename);
+    visualize(objFilepath).then(() => {
+        res.status(200).send({objUrl: filename});
     }).catch(err => {
         console.error(err);
         res.status(500).send({error: err.toString()});
     });
 });
 
-function visualize() {
+function visualize(filepath) {
     return new Promise((resolve, reject) => {
-        exec('python visualize.py', {cwd: __dirname}, (error, stdout, stderr) => {
+        exec(`python visualize.py ${filepath}`, {cwd: __dirname}, (error, stdout, stderr) => {
             if (error) {
                 reject(error);
                 return;
