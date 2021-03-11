@@ -146,12 +146,12 @@
                             <input type="text" name="MagnetLength">
                         </label>
                         <label>
-                            Magnet Thickness
-                            <input type="text" name="MagnetThickness">
-                        </label>
-                        <label>
                             Magnet Width
                             <input type="text" name="MagnetWidth">
+                        </label>
+                        <label>
+                            Magnet Thickness
+                            <input type="text" name="MagnetThickness">
                         </label>
                     </section>
                     <section>
@@ -182,6 +182,112 @@
                         <label>
                             Coil Inner Width 2
                             <input type="text" name="CoilInnerWidth2">
+                        </label>
+                    </section>
+                </fieldset>
+                <fieldset>
+                    <legend>Furling</legend>
+                    <section>
+                        <label>
+                            Angle
+                            <input type="text" name="Angle">
+                        </label>
+                        <label>
+                            Offset
+                            <input type="text" name="Offset">
+                        </label>
+                    </section>
+                    <section>
+                        <label>
+                            Bracket Length
+                            <input type="text" name="BracketLength">
+                        </label>
+                        <label>
+                            Bracket Width
+                            <input type="text" name="BracketWidth">
+                        </label>
+                        <label>
+                            Bracket Thickness
+                            <input type="text" name="BracketThickness">
+                        </label>
+                    </section>
+                    <section>
+                        <label>
+                            Boom Length
+                            <input type="text" name="BoomLength">
+                        </label>
+                        <label>
+                            Boom Pipe Radius
+                            <input type="text" name="BoomPipeRadius">
+                        </label>
+                        <label>
+                            Boom Pipe Thickness
+                            <input type="text" name="BoomPipeThickness">
+                        </label>
+                    </section>
+                    <section>
+                        <label>
+                            Vane Length
+                            <input type="text" name="VaneLength">
+                        </label>
+                        <label>
+                            Vane Thickness
+                            <input type="text" name="VaneThickness">
+                        </label>
+                        <label>
+                            Vane Width
+                            <input type="text" name="VaneWidth">
+                        </label>
+                    </section>
+                </fieldset>
+                <fieldset>
+                    <legend>User</legend>
+                    <section>
+                        <label>
+                            Hub Holes Placement
+                            <input type="text" name="HubHolesPlacement">
+                        </label>
+                        <label>
+                            Hub Holes
+                            <input type="text" name="HubHoles">
+                        </label>
+                        <label>
+                            Holes
+                            <input type="text" name="Holes">
+                        </label>
+                    </section>
+                    <section>
+                        <label>
+                            Metal Length L
+                            <input type="text" name="MetalLengthL">
+                        </label>
+                        <label>
+                            Metal Thickness L
+                            <input type="text" name="MetalThicknessL">
+                        </label>
+                        <label>
+                            Flat Metal Thickness
+                            <input type="text" name="FlatMetalThickness">
+                        </label>    
+                    </section>
+                    <section>
+                        <label>
+                            Yaw Pipe Radius
+                            <input type="text" name="YawPipeRadius">
+                        </label>
+                        <label>
+                            Pipe Thickness
+                            <input type="text" name="PipeThickness">
+                        </label>
+                    </section>
+                    <section>
+                        <label>
+                            Rotor Inner Circle
+                            <input type="text" name="RotorInnerCircle">
+                        </label>
+                        <label>
+                            Resine Rotor Margin
+                            <input type="text" name="ResineRotorMargin">
                         </label>
                     </section>
                 </fieldset>
@@ -338,8 +444,7 @@
         populateForm(form, state.selectedVariant);
         function populateForm(form, selectedVariant) {
             const parameters = parametersByVariant[selectedVariant];
-            // const keyValuePairs = Object.entries(flatten(parameters));
-            const keyValuePairs = Object.entries(parameters.magnafpm);
+            const keyValuePairs = Object.entries(flatten(parameters));
             for (const [key, value] of keyValuePairs) {
                 form[key].value = value;
             }
