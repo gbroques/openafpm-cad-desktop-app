@@ -11,6 +11,9 @@
             --spacing: 8px;
             --main-color: #43A047; /* Green 600 from https://www.materialui.co/colors */
         }
+        html {
+            scroll-behavior: smooth;
+        }
         body {
             background: white;
             margin: 0;
@@ -73,7 +76,7 @@
             padding: 8px;
         }
         button[type="submit"] {
-            padding: calc(var(--spacing) * 2);
+            padding: calc(var(--spacing) * 3);
             background-color: var(--main-color);
             color: white;
             border: none;
@@ -124,14 +127,14 @@
             flex: 1;
             border: none;
             background: white;
-            padding: calc(var(--spacing) * 2);
+            padding: calc(var(--spacing) * 3);
             text-transform: uppercase;
             cursor: pointer;
             font-weight: bold;
             color: rgba(0, 0, 0, 0.67);
         }
         .active {
-            border-bottom: 2px solid var(--main-color);
+            border-bottom: 3px solid var(--main-color);
             color: var(--main-color);
         }
     </style>
@@ -334,14 +337,16 @@
     <script>
         function loadObj(objUrl) {
             console.log("window.innerWidth",  window.innerWidth, "window.innerHeight", window.innerHeight)
+            const tabs = document.getElementsByTagName('nav')[0];
+            const tabsHeight = tabs.offsetHeight;
             const windTurbineVisualization = new OpenAfpmCadVisualization({
                 objUrl,
                 rootDomElement: window.document.getElementById('visualization'),
                 width: window.innerWidth,
-                height: window.innerHeight
+                height: window.innerHeight - tabsHeight
             });
             window.addEventListener('resize', () => {
-                windTurbineVisualization.resize(window.innerWidth, window.innerHeight)
+                windTurbineVisualization.resize(window.innerWidth, window.innerHeight - tabsHeight)
             }, false);
             window.addEventListener('mousemove', (e) => {
                 windTurbineVisualization.handleMouseMove(e)
@@ -498,6 +503,7 @@
                 event.submitter.disabled = false;
                 const {objUrl} = response;
                 loadObj(objUrl);
+                document.body.scrollTop = document.documentElement.scrollTop = 0;
             }).catch(console.error);
         }
         form.addEventListener('submit', handleSubmit);
