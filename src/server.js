@@ -15,6 +15,7 @@ app.use('/openafpm-cad-visualization.js', (req, res) => {
 });
 
 const groupByKey = {
+    // magnafpm
     'RotorDiskRadius': 'magnafpm',
     'DiskThickness': 'magnafpm',
     'MagnetLength': 'magnafpm',
@@ -26,6 +27,8 @@ const groupByKey = {
     'CoilInnerWidth1': 'magnafpm',
     'CoilInnerWidth2': 'magnafpm',
     'MechanicalClearance': 'magnafpm',
+
+    // furling
     'Angle': 'furling',
     'BracketLength': 'furling',
     'BracketWidth': 'furling',
@@ -37,6 +40,8 @@ const groupByKey = {
     'VaneLength': 'furling',
     'VaneWidth': 'furling',
     'Offset': 'furling',
+
+    // user
     'HubHolesPlacement': 'user',
     'RotorInnerCircle': 'user',
     'Holes': 'user',
@@ -83,8 +88,6 @@ function visualize(filepath) {
     });
 }
 
-module.exports = app;
-
 function createdNestedObject(object, groupGetter, valueTransformer) {
     const entries = Object.entries(object);
     return entries.reduce((acc, entry) => {
@@ -100,3 +103,5 @@ function createdNestedObject(object, groupGetter, valueTransformer) {
         return acc;
     }, {});
 }
+
+module.exports = app;
