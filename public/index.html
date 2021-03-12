@@ -336,7 +336,6 @@
     <script src="openafpm-cad-visualization.js"></script>
     <script>
         function loadObj(objUrl) {
-            console.log("window.innerWidth",  window.innerWidth, "window.innerHeight", window.innerHeight)
             const tabs = document.getElementsByTagName('nav')[0];
             const tabsHeight = tabs.offsetHeight;
             const windTurbineVisualization = new OpenAfpmCadVisualization({
@@ -483,15 +482,19 @@
         const form = window.document.forms[0];
         const defaultVariant = WindTurbine.T_SHAPE;
         const state = {
-            selectedVariant: defaultVariant
+            selectedVariant: defaultVariant,
+            objUrl: '',
+            form: '',
+            prevForm: ''
         };
         function handleSubmit(event) {
             event.preventDefault();
             const submitterTextContent = event.submitter.textContent;
             event.submitter.textContent = 'Loading...';
             event.submitter.disabled = true;
+            const body = new URLSearchParams(new FormData(event.target));
             fetch(event.target.action, {
-                body: new URLSearchParams(new FormData(event.target)),
+                body,
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
@@ -502,8 +505,9 @@
                 event.submitter.textContent = submitterTextContent;
                 event.submitter.disabled = false;
                 const {objUrl} = response;
-                loadObj(objUrl);
+                state.objUrl = objUrl
                 document.body.scrollTop = document.documentElement.scrollTop = 0;
+                state.form = body.toString();
             }).catch(console.error);
         }
         form.addEventListener('submit', handleSubmit);
@@ -537,6 +541,23 @@
             const containers = document.getElementsByClassName('tabcontent');
             containers[activeTabIndex].style.display = 'none';
             containers[selectedTabIndex].style.display = 'block';
+            const form = document.getElementsByTagName('form')[0];
+            const body = new URLSearchParams(new FormData(form));
+
+            if(state.objUrl && selectedTabIndex == 1) {
+                const visualization = document.getElementById('visualization');
+                const load = () => {
+                    loadObj(state.objUrl);
+                    state.prevForm = state.form;
+                };
+                if(visualization.children.length === 0) {
+                    load();
+                }
+                if (visualization.children.length !== 0 && state.prevForm !== state.form) {
+                    visualization.innerHTML = '';
+                    load();
+                }
+            }
         }
     </script>
 </body>

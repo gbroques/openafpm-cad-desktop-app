@@ -11,7 +11,7 @@
   "license": "LGPL-2.1-or-later",
   "dependencies": {
     "express": "^4.17.1",
-    "openafpm-cad-visualization": "git+https://github.com/gbroques/openafpm-cad-visualization.git#e02256cfa3ab21f4d479ff05770d87877e84f8a9"
+    "openafpm-cad-visualization": "git+https://github.com/gbroques/openafpm-cad-visualization.git#486ec3d8c48fa00104ef9f27dc44fa2e9ba3ef9c"
   },
   "devDependencies": {
     "electron": "^12.0.0"
