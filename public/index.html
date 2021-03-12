@@ -121,7 +121,7 @@
         }
         nav {
             display: flex;
-            box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.2);
+            box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.3);
         }
         nav > button {
             flex: 1;
@@ -136,6 +136,9 @@
         .active {
             border-bottom: 3px solid var(--main-color);
             color: var(--main-color);
+        }
+        .tabcontent {
+            transition: opacity 250ms ease-in-out;
         }
     </style>
 </head>
@@ -330,7 +333,7 @@
             </form>
         </main>
     </div>
-    <div id="visualization" class="tabcontent" style="display: none;">
+    <div id="visualization" class="tabcontent" style="display: none; opacity: 0;">
 
     </div>
     <script src="openafpm-cad-visualization.js"></script>
@@ -487,7 +490,16 @@
             form: '',
             prevForm: ''
         };
+        const handleScroll = debounce(event => {
+            if (document.scrollingElement.scrollTop === 0) {
+                if (state.form) {
+                    document.getElementsByTagName('nav')[0].children[1].click();
+                    window.removeEventListener('scroll', handleScroll);
+                }
+            }
+        }, 100);
         function handleSubmit(event) {
+            window.addEventListener('scroll', handleScroll);
             event.preventDefault();
             const submitterTextContent = event.submitter.textContent;
             event.submitter.textContent = 'Loading...';
@@ -529,6 +541,18 @@
             return Object.values(object).reduce((acc, obj) => ({...acc, ...obj}), {});
         }
 
+        function debounce(fn, ms) {
+            let id;
+            return (...args) => {
+                if (id) {
+                    clearTimeout(id);
+                }
+                id = setTimeout(() => {
+                    fn(...args);
+                }, ms);
+            };
+        }
+
         function selectTab(event) {
             const selectedTab = event.target;
             const parent = selectedTab.parentElement;
@@ -541,6 +565,12 @@
             const containers = document.getElementsByClassName('tabcontent');
             containers[activeTabIndex].style.display = 'none';
             containers[selectedTabIndex].style.display = 'block';
+
+            setTimeout(() => {
+                containers[activeTabIndex].style.opacity = '0';
+                containers[selectedTabIndex].style.opacity = '1';
+            }, 20);
+
             const form = document.getElementsByTagName('form')[0];
             const body = new URLSearchParams(new FormData(form));
 
