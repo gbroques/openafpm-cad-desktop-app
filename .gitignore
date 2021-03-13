@@ -2,3 +2,4 @@ node_modules/
 src/parameters.json
 .vscode/
 public/wind-turbine.obj
+.env

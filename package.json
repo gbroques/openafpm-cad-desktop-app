@@ -10,6 +10,7 @@
   "author": "G Roques",
   "license": "LGPL-2.1-or-later",
   "dependencies": {
+    "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "openafpm-cad-visualization": "git+https://github.com/gbroques/openafpm-cad-visualization.git#486ec3d8c48fa00104ef9f27dc44fa2e9ba3ef9c"
   },

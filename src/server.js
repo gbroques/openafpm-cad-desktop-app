@@ -1,7 +1,8 @@
-const path = require('path');
-const express = require('express');
-const fs = require('fs');
 const { exec } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+const express = require('express');
+require('dotenv').config();
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
@@ -64,16 +65,17 @@ app.use('/visualize', (req, res) => {
     const filename = 'wind-turbine.obj';
     const objFilepath = path.join(__dirname, '..', 'public', filename);
     visualize(objFilepath).then(() => {
-        res.status(200).send({objUrl: filename});
+        res.status(200).send({ objUrl: filename });
     }).catch(err => {
         console.error(err);
-        res.status(500).send({error: err.toString()});
+        res.status(500).send({ error: err.toString() });
     });
 });
 
 function visualize(filepath) {
     return new Promise((resolve, reject) => {
-        exec(`python visualize.py ${filepath}`, {cwd: __dirname}, (error, stdout, stderr) => {
+        const options = { cwd: __dirname };
+        exec(`${process.env.PYTHON} visualize.py ${filepath}`, options, (error, stdout, stderr) => {
             if (error) {
                 reject(error);
                 return;

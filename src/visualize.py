@@ -1,9 +1,12 @@
 """
 Usage:
     python visualize.py <obj filepath>
+
+FREECAD_LIB environment variable must be set.
 """
+import os
 import sys
-sys.path.append('/home/g/Desktop/squashfs-root/usr/lib/')
+sys.path.append(os.environ['FREECAD_LIB'])
 import FreeCAD
 from openafpm_cad_core import visualize
 import json
