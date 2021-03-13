@@ -25,7 +25,7 @@
             align-items: center;
             margin-bottom: calc(var(--spacing) * 2);
         }
-        svg {
+        .logo {
             fill: var(--main-color);
         }
         .container {
@@ -140,6 +140,23 @@
         .tabcontent {
             transition: opacity 250ms ease-in-out;
         }
+        #error-banner {
+            display: flex;
+            align-items: center;
+            background-color: #e53935;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.3);
+            color: white;
+            border-radius: 4px;
+            padding: 16px;
+            justify-content: space-between;
+            transition: opacity 250ms ease-in-out;
+        }
+        #error-message {
+            margin: 0 0 0 8px;
+        }
+        .error-icon {
+            min-width: 24px;
+        }
     </style>
 </head>
 <body>
@@ -153,7 +170,7 @@
     </nav>
     <div class="container tabcontent">
         <header>
-            <svg alt="Wind Turbine" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" height="2.488rem" fill="#2196F3" version="1.1" x="0px" y="0px" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><g><path d="M317.027,177.958c-32.982,0-62.777,3.344-84.151,8.718c-6.516-10.781-18.077-18.155-31.405-18.905   c-5.828-21.437-18.077-49.779-35.092-79.247c-32.53-56.31-70.122-95.496-83.996-87.466c-13.874,8,1.219,60.154,33.749,116.465   c16.546,28.687,34.42,52.904,49.81,68.716c-3.75,6.031-5.921,13.125-5.921,20.718c0,7.125,1.89,13.781,5.203,19.531   c-15.218,15.843-32.812,39.748-49.091,67.974c-32.53,56.312-47.623,108.465-33.749,116.465   c13.875,8.03,51.466-31.124,83.996-87.435c16.499-28.594,28.499-56.1,34.529-77.317c13.578-0.563,25.358-8,31.967-18.905   c21.375,5.375,51.169,8.718,84.151,8.718c65.028,0,117.744-13,117.744-29.03C434.771,190.958,382.056,177.958,317.027,177.958z"/><path d="M218.048,265.643c-7.328,21.068-18.608,45.1-32.452,69.1c-7.187,12.438-14.812,24.404-22.546,35.404l-4.75,141.839h78.512   l-8.406-250.749C225.11,263.018,221.642,264.518,218.048,265.643z"/></g></svg>
+            <svg class="logo" alt="Wind Turbine" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" height="2.488rem" fill="#2196F3" version="1.1" x="0px" y="0px" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><g><path d="M317.027,177.958c-32.982,0-62.777,3.344-84.151,8.718c-6.516-10.781-18.077-18.155-31.405-18.905   c-5.828-21.437-18.077-49.779-35.092-79.247c-32.53-56.31-70.122-95.496-83.996-87.466c-13.874,8,1.219,60.154,33.749,116.465   c16.546,28.687,34.42,52.904,49.81,68.716c-3.75,6.031-5.921,13.125-5.921,20.718c0,7.125,1.89,13.781,5.203,19.531   c-15.218,15.843-32.812,39.748-49.091,67.974c-32.53,56.312-47.623,108.465-33.749,116.465   c13.875,8.03,51.466-31.124,83.996-87.435c16.499-28.594,28.499-56.1,34.529-77.317c13.578-0.563,25.358-8,31.967-18.905   c21.375,5.375,51.169,8.718,84.151,8.718c65.028,0,117.744-13,117.744-29.03C434.771,190.958,382.056,177.958,317.027,177.958z"/><path d="M218.048,265.643c-7.328,21.068-18.608,45.1-32.452,69.1c-7.187,12.438-14.812,24.404-22.546,35.404l-4.75,141.839h78.512   l-8.406-250.749C225.11,263.018,221.642,264.518,218.048,265.643z"/></g></svg>
             <h1>OpenAFPM CAD Visualization</h1>
         </header>
         <main>
@@ -329,6 +346,15 @@
                         </label>
                     </section>
                 </fieldset>
+                <div id="error-banner" style="display: none; opacity: 0;">
+                    <div style="display: flex; align-items: center">
+                        <svg class="error-icon" fill="#ffffff" width="24" height="24" focusable="false" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"></path></svg>
+                        <p id="error-message"></p>
+                    </div>
+                    <button style="border: none; background: transparent; cursor: pointer;" id="dismissErrorButton">
+                        <svg fill="#ffffff" width="24" height="24" focusable="false" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+                    </button>
+                </div>
                 <button type="submit">Visualize</button>
             </form>
         </main>
@@ -513,15 +539,42 @@
                 method: event.target.method
             })
             .then(r => r.json())
+            .then(r => {
+                if (r.error) {
+                    throw new Error(r.error);
+                }
+                return r;
+            })
             .then(response => {
-                event.submitter.textContent = submitterTextContent;
-                event.submitter.disabled = false;
                 const {objUrl} = response;
                 state.objUrl = objUrl
                 document.body.scrollTop = document.documentElement.scrollTop = 0;
                 state.form = body.toString();
-            }).catch(console.error);
+            }).catch(error => {
+                const errorBanner = document.getElementById('error-banner');
+                const errorMessage = document.getElementById('error-message');
+                errorMessage.textContent = error.message;
+                console.error(error.message);
+                errorBanner.style.display = 'flex';
+                setTimeout(() => {
+                    errorBanner.style.opacity = '1';
+                }, 20);
+            }).finally(() => {
+                event.submitter.textContent = submitterTextContent;
+                event.submitter.disabled = false;
+            });
         }
+
+        const dismissErrorButton = document.getElementById('dismissErrorButton');
+        dismissErrorButton.addEventListener('click', event => {
+            event.stopPropagation();
+            event.preventDefault();
+            const errorBanner = document.getElementById('error-banner');
+            errorBanner.style.opacity = '0';
+            setTimeout(() => {
+                errorBanner.style.display = "none";
+            }, 250);
+        });
         form.addEventListener('submit', handleSubmit);
         populateForm(form, state.selectedVariant);
         function populateForm(form, selectedVariant) {
