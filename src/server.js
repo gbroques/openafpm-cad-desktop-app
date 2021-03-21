@@ -64,7 +64,8 @@ app.use('/visualize', (req, res) => {
     fs.writeFileSync(filepath, json);
     const filename = 'wind-turbine.obj';
     const objFilepath = path.join(__dirname, '..', 'public', filename);
-    visualize(objFilepath).then(() => {
+    visualize(objFilepath).then((stdout) => {
+        console.log(stdout);
         res.status(200).send({ objUrl: filename });
     }).catch(err => {
         console.error(err);

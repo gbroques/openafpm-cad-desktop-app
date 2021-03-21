@@ -26,3 +26,6 @@ filepath = sys.argv[1]
 with open(filepath, 'w') as f:
     f.write(obj_file_contents)
     print(filepath + ' created.')
+
+path = os.path.dirname(filepath)
+wind_turbine.save_as(path)
