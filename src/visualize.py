@@ -28,4 +28,4 @@ with open(filepath, 'w') as f:
     print(filepath + ' created.')
 
 path = os.path.dirname(filepath)
-wind_turbine.save_as(path)
+wind_turbine.save_to(path)
