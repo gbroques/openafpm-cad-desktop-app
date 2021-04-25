@@ -4,3 +4,4 @@ src/parameters.json
 *.obj
 *.FCStd*
 .env
+*.zip
