@@ -8,7 +8,7 @@ import os
 import sys
 sys.path.append(os.environ['FREECAD_LIB'])
 import FreeCAD
-from openafpm_cad_core import visualize
+from openafpm_cad_core.app import visualize
 import json
 
 with open('parameters.json') as f:
