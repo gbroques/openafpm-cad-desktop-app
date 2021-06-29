@@ -30,7 +30,7 @@ const groupByKey = {
     'MechanicalClearance': 'magnafpm',
 
     // furling
-    'Angle': 'furling',
+    'VerticalPlaneAngle': 'furling',
     'BracketLength': 'furling',
     'BracketWidth': 'furling',
     'BracketThickness': 'furling',
@@ -52,7 +52,8 @@ const groupByKey = {
     'YawPipeRadius': 'user',
     'PipeThickness': 'user',
     'ResineRotorMargin': 'user',
-    'HubHoles': 'user'
+    'HubHoles': 'user',
+    'HorizontalPlaneAngle': 'user'
 };
 
 app.use('/visualize', (req, res) => {

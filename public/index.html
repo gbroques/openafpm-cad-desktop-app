@@ -271,8 +271,8 @@
                     <legend>Furling</legend>
                     <section>
                         <label>
-                            Angle
-                            <input type="text" name="Angle">
+                            VerticalPlaneAngle
+                            <input type="text" name="VerticalPlaneAngle">
                         </label>
                         <label>
                             Offset
@@ -372,6 +372,12 @@
                             <input type="text" name="ResineRotorMargin">
                         </label>
                     </section>
+                    <section>
+                        <label>
+                            Horizontal Plane Angle
+                            <input type="text" name="HorizontalPlaneAngle">
+                        </label>
+                    </section>
                 </fieldset>
                 <div id="error-banner" style="display: none; opacity: 0;">
                     <div style="display: flex; align-items: center">
@@ -442,7 +448,7 @@
                     'MechanicalClearance': 3
                 },
                 'furling': {
-                    'Angle': 20,
+                    'VerticalPlaneAngle': 20,
                     'BracketLength': 300,
                     'BracketWidth': 30,
                     'BracketThickness': 5,
@@ -464,7 +470,8 @@
                     'YawPipeRadius': 30.15,
                     'PipeThickness': 5,
                     'ResineRotorMargin': 5,
-                    'HubHoles': 6
+                    'HubHoles': 6,
+                    'HorizontalPlaneAngle': 55
                 }
             },
             [WindTurbine.H_SHAPE]: {
@@ -482,7 +489,7 @@
                     'MechanicalClearance': 3
                 },
                 'furling': {
-                    'Angle': 20,
+                    'VerticalPlaneAngle': 20,
                     'BracketLength': 300,
                     'BracketWidth': 30,
                     'BracketThickness': 5,
@@ -504,7 +511,8 @@
                     'YawPipeRadius': 44.5,
                     'PipeThickness': 5,
                     'ResineRotorMargin': 5,
-                    'HubHoles': 7
+                    'HubHoles': 7,
+                    'HorizontalPlaneAngle': 55
                 }
             },
             [WindTurbine.STAR_SHAPE]: {
@@ -522,7 +530,7 @@
                     'MechanicalClearance': 3
                 },
                 'furling': {
-                    'Angle': 15,
+                    'VerticalPlaneAngle': 15,
                     'BracketLength': 600,
                     'BracketWidth': 50,
                     'BracketThickness': 6,
@@ -544,7 +552,8 @@
                     'YawPipeRadius': 57.15,
                     'PipeThickness': 5,
                     'ResineRotorMargin': 5,
-                    'HubHoles': 8
+                    'HubHoles': 8,
+                    'HorizontalPlaneAngle': 55
                 }
             }
         };
