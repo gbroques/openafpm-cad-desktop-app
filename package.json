@@ -12,7 +12,7 @@
   "dependencies": {
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
-    "openafpm-cad-visualization": "git+https://github.com/gbroques/openafpm-cad-visualization.git#dbb58fc1c25c8471da4b4afdf5c5873de7ddbc0a"
+    "openafpm-cad-visualization": "git+https://github.com/gbroques/openafpm-cad-visualization.git#5d70d2b8f0c963fc139b6e8eb7732d3c13848cc6"
   },
   "devDependencies": {
     "electron": "^12.0.0"
