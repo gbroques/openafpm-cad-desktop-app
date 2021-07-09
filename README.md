@@ -1,5 +1,7 @@
 # OpenAFPM CAD Desktop App
 
+A desktop application for quickly testing the integration between [openafpm-cad-core](https://github.com/gbroques/openafpm-cad-core) and [openafpm-cad-visualization](https://github.com/gbroques/openafpm-cad-visualization).
+
 ## Prerequisites
 1. Install [Node.js](https://nodejs.org/en/).
 2. Install [FreeCAD 18.4](https://github.com/FreeCAD/FreeCAD/releases/tag/0.18.4).
