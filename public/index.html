@@ -502,7 +502,7 @@
         });
         form.addEventListener('submit', handleSubmit);
         let parametersByVariant = null;
-        fetch('parameters.json').then(r => r.json()).then(parameters => {
+        fetch('/defaultparameters').then(r => r.json()).then(parameters => {
             parametersByVariant = parameters;
             populateForm(form, state.selectedVariant);
         }).catch(console.error);
