@@ -5,7 +5,7 @@ const express = require('express');
 require('dotenv').config();
 
 const app = express();
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 const rootPath = path.join(__dirname, '..');
 
@@ -24,52 +24,8 @@ app.use('/defaultparameters', (req, res) => {
     });
 });
 
-const groupByKey = {
-    // magnafpm
-    'RotorDiskRadius': 'magnafpm',
-    'DiskThickness': 'magnafpm',
-    'MagnetLength': 'magnafpm',
-    'MagnetWidth': 'magnafpm',
-    'MagnetThickness': 'magnafpm',
-    'NumberMagnet': 'magnafpm',
-    'StatorThickness': 'magnafpm',
-    'CoilLegWidth': 'magnafpm',
-    'CoilInnerWidth1': 'magnafpm',
-    'CoilInnerWidth2': 'magnafpm',
-    'MechanicalClearance': 'magnafpm',
-
-    // furling
-    'VerticalPlaneAngle': 'furling',
-    'BracketLength': 'furling',
-    'BracketWidth': 'furling',
-    'BracketThickness': 'furling',
-    'BoomLength': 'furling',
-    'BoomPipeRadius': 'furling',
-    'BoomPipeThickness': 'furling',
-    'VaneThickness': 'furling',
-    'VaneLength': 'furling',
-    'VaneWidth': 'furling',
-    'Offset': 'furling',
-
-    // user
-    'HubHolesPlacement': 'user',
-    'RotorInnerCircle': 'user',
-    'Holes': 'user',
-    'MetalLengthL': 'user',
-    'MetalThicknessL': 'user',
-    'FlatMetalThickness': 'user',
-    'YawPipeRadius': 'user',
-    'PipeThickness': 'user',
-    'ResineRotorMargin': 'user',
-    'HubHoles': 'user',
-    'HorizontalPlaneAngle': 'user'
-};
-
 app.use('/visualize', (req, res) => {
-    const parameterByGroup = createdNestedObject(req.body,
-        key => groupByKey[key],
-        parseFloat);
-    const json = JSON.stringify(parameterByGroup);
+    const json = JSON.stringify(req.body);
     const filepath = path.join(__dirname, 'parameters.json');
     fs.writeFileSync(filepath, json);
     const filename = 'wind-turbine.obj';
@@ -108,22 +64,6 @@ function execPythonScript(scriptName, ...args) {
             }
         })
     });
-}
-
-function createdNestedObject(object, groupGetter, valueTransformer) {
-    const entries = Object.entries(object);
-    return entries.reduce((acc, entry) => {
-        const [key, value] = entry;
-        const group = groupGetter(key);
-        if (group === undefined) {
-            return acc;
-        }
-        if (acc[group] === undefined) {
-            acc[group] = {};
-        }
-        acc[group][key] = valueTransformer(value);
-        return acc;
-    }, {});
 }
 
 module.exports = app;

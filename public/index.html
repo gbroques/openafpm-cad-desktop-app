@@ -449,17 +449,48 @@
                 }
             }
         }, 100);
+        let parametersByVariant = null;
+        const submitButton = document.querySelector('button[type="submit"]');
+        const submitterTextContent = submitButton.textContent;
+        submitButton.textContent = 'Loading...';
+        submitButton.disabled = true;
+        fetch('/defaultparameters').then(r => r.json()).then(parameters => {
+            parametersByVariant = parameters;
+            populateForm(form, state.selectedVariant);
+        }).catch(console.error).finally(() => {
+            submitButton.textContent = submitterTextContent;
+            submitButton.disabled = false;
+        });
+        function populateForm(form, selectedVariant) {
+            const parameters = parametersByVariant[selectedVariant];
+            const keyValuePairs = Object.entries(flatten(parameters));
+            for (const [key, value] of keyValuePairs) {
+                form[key].value = value;
+            }
+        }
         function handleSubmit(event) {
             window.addEventListener('scroll', handleScroll);
             event.preventDefault();
-            const submitterTextContent = event.submitter.textContent;
-            event.submitter.textContent = 'Loading...';
-            event.submitter.disabled = true;
-            const body = new URLSearchParams(new FormData(event.target));
+            const submitButton = event.submitter;
+            const submitterTextContent = submitButton.textContent;
+            submitButton.textContent = 'Loading...';
+            submitButton.disabled = true;
+            const formData = new FormData(event.target);
+            const valueByKey = {};
+            formData.forEach((value, key) => {
+                valueByKey[key] = value;
+            });
+            const parameters = parametersByVariant[state.selectedVariant];
+            const groupByKey = flattenToGroupByKey(parameters);
+            const parameterByGroup = createdNestedObject(valueByKey,
+                key => groupByKey[key],
+                parseFloat);
+            const body = JSON.stringify(parameterByGroup);
+
             fetch(event.target.action, {
                 body,
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Type': 'application/json',
                 },
                 method: event.target.method
             })
@@ -485,8 +516,8 @@
                     errorBanner.style.opacity = '1';
                 }, 20);
             }).finally(() => {
-                event.submitter.textContent = submitterTextContent;
-                event.submitter.disabled = false;
+                submitButton.textContent = submitterTextContent;
+                submitButton.disabled = false;
             });
         }
 
@@ -501,18 +532,7 @@
             }, 250);
         });
         form.addEventListener('submit', handleSubmit);
-        let parametersByVariant = null;
-        fetch('/defaultparameters').then(r => r.json()).then(parameters => {
-            parametersByVariant = parameters;
-            populateForm(form, state.selectedVariant);
-        }).catch(console.error);
-        function populateForm(form, selectedVariant) {
-            const parameters = parametersByVariant[selectedVariant];
-            const keyValuePairs = Object.entries(flatten(parameters));
-            for (const [key, value] of keyValuePairs) {
-                form[key].value = value;
-            }
-        }
+
         const select = document.getElementsByTagName('select')[0];
         function handleSelect(event) {
             state.selectedVariant = event.target.value;
@@ -521,6 +541,34 @@
         select.addEventListener('change', handleSelect);
         function flatten(object) {
             return Object.values(object).reduce((acc, obj) => ({...acc, ...obj}), {});
+        }
+
+        function flattenToGroupByKey(parameters) {
+            const entries = Object.entries(parameters);
+            return entries.reduce((acc, entry) => {
+                const [group, valueByKey] = entry;
+                const keys = Object.keys(valueByKey);
+                const groupByKey = keys.reduce((obj, key) => {
+                    return {...obj, [key]: group};
+                }, {});
+                return {...acc, ...groupByKey};
+            }, {});
+        }
+
+        function createdNestedObject(object, groupGetter, valueTransformer) {
+            const entries = Object.entries(object);
+            return entries.reduce((acc, entry) => {
+                const [key, value] = entry;
+                const group = groupGetter(key);
+                if (group === undefined) {
+                    return acc;
+                }
+                if (acc[group] === undefined) {
+                    acc[group] = {};
+                }
+                acc[group][key] = valueTransformer(value);
+                return acc;
+            }, {});
         }
 
         function debounce(fn, ms) {
