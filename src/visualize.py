@@ -1,6 +1,6 @@
 """
 Usage:
-    python visualize.py <obj filepath>
+    python visualize.py <obj filepath> <furl transforms filepath>.
 
 FREECAD_LIB environment variable must be set.
 """
@@ -22,10 +22,16 @@ wind_turbine = visualize(magnafpm_parameters, user_parameters, furling_parameter
 
 obj_file_contents = wind_turbine.to_obj()
 
-filepath = sys.argv[1]
-with open(filepath, 'w') as f:
+obj_filepath = sys.argv[1]
+with open(obj_filepath, 'w') as f:
     f.write(obj_file_contents)
-    print(filepath + ' created.')
+    print(obj_filepath + ' created.')
 
-path = os.path.dirname(filepath)
+path = os.path.dirname(obj_filepath)
 wind_turbine.save_to(path)
+
+furl_transforms_filepath = sys.argv[2]
+with open(furl_transforms_filepath, 'w') as f:
+    furl_transforms = wind_turbine.get_furl_transforms()
+    f.write(json.dumps(furl_transforms, indent=2))
+    print(furl_transforms_filepath + ' created.')

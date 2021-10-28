@@ -410,14 +410,15 @@
     </div>
     <script src="openafpm-cad-visualization.js"></script>
     <script>
-        function loadObj(objUrl) {
+        function loadObj(objUrl, furlTransforms) {
             const tabs = document.getElementsByTagName('nav')[0];
             const tabsHeight = tabs.offsetHeight;
             const windTurbineVisualization = new OpenAfpmCadVisualization({
                 objUrl,
                 rootDomElement: window.document.getElementById('visualization-root'),
                 width: window.innerWidth,
-                height: window.innerHeight - tabsHeight
+                height: window.innerHeight - tabsHeight,
+                furlTransforms
             });
             window.addEventListener('resize', () => {
                 windTurbineVisualization.resize(window.innerWidth, window.innerHeight - tabsHeight)
@@ -437,6 +438,7 @@
         const state = {
             selectedVariant: defaultVariant,
             objUrl: '',
+            furlTransforms: [],
             form: '',
             prevForm: ''
         };
@@ -502,8 +504,9 @@
                 return r;
             })
             .then(response => {
-                const {objUrl} = response;
-                state.objUrl = objUrl
+                const {objUrl, furlTransforms} = response;
+                state.objUrl = objUrl;
+                state.furlTransforms = furlTransforms;
                 document.body.scrollTop = document.documentElement.scrollTop = 0;
                 state.form = body.toString();
             }).catch(error => {
@@ -604,13 +607,13 @@
             const form = document.getElementsByTagName('form')[0];
             const body = new URLSearchParams(new FormData(form));
 
-            if(state.objUrl && selectedTabIndex == 1) {
+            if (state.objUrl && selectedTabIndex == 1) {
                 const visualization = document.getElementById('visualization-root');
                 const load = () => {
-                    loadObj(state.objUrl);
+                    loadObj(state.objUrl, state.furlTransforms);
                     state.prevForm = state.form;
                 };
-                if(visualization.children.length === 0) {
+                if (visualization.children.length === 0) {
                     load();
                 }
                 if (visualization.children.length !== 0 && state.prevForm !== state.form) {
