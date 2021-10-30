@@ -26,21 +26,29 @@ app.use('/defaultparameters', (req, res) => {
 
 app.use('/visualize', (req, res) => {
     const json = JSON.stringify(req.body);
-    const filepath = path.join(__dirname, 'parameters.json');
-    fs.writeFileSync(filepath, json);
-    const filename = 'wind-turbine.obj';
-    const objFilepath = path.join(__dirname, '..', 'public', filename);
-    visualize(objFilepath).then((stdout) => {
+    const parametersFilepath = path.join(__dirname, 'parameters.json');
+    fs.writeFileSync(parametersFilepath, json);
+    
+    const publicFilepath = path.join(__dirname, '..', 'public');
+
+    const objFilename = 'wind-turbine.obj';
+    const objFilepath = path.join(publicFilepath, objFilename);
+
+    const furlTransformsFilename = 'furl-transforms.json';
+    const furlTransformsFilepath = path.join(publicFilepath, furlTransformsFilename);
+    
+    visualize(objFilepath, furlTransformsFilepath).then((stdout) => {
         console.log(stdout);
-        res.status(200).send({ objUrl: filename });
+        const furlTransforms = JSON.parse(fs.readFileSync(furlTransformsFilepath))
+        res.status(200).send({ objUrl: objFilename, furlTransforms });
     }).catch(err => {
         console.error(err);
         res.status(500).send({ error: err.toString() });
     });
 });
 
-function visualize(filepath) {
-    return execPythonScript('visualize', filepath);
+function visualize(...args) {
+    return execPythonScript('visualize', ...args);
 }
 
 function getDefaultParameters() {
