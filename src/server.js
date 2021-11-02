@@ -61,6 +61,9 @@ function execPythonScript(scriptName, ...args) {
         const command = `${process.env.PYTHON} ${scriptName}.py ${args.join(' ')}`;
         exec(command, options, (error, stdout, stderr) => {
             if (error) {
+                if (stdout) {
+                    console.log(stdout);
+                }
                 reject(error);
                 return;
             }
