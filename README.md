@@ -25,6 +25,15 @@ A desktop application for quickly testing the integration between [openafpm-cad-
 
     See `.env.example`.
 
+    On Linux, you can download and extract [the latest AppImage](https://github.com/FreeCAD/FreeCAD/releases/tag/0.20) for the `squashfs-root` directory seen in the above example.
+
+    ```
+    chmod +x ./FreeCAD-0.20.0-Linux-x86_64.AppImage
+    ./FreeCAD-0.20.0-Linux-x86_64.AppImage --appimage-extract
+    ```
+
+    Clone or symlink `openafpm-cad-core` and [`freecad-to-obj`](https://github.com/gbroques/freecad-to-obj) to FreeCAD Mod directory. See [Installing more workbenches](https://wiki.freecadweb.org/Installing_more_workbenches#Installing_for_a_single_user) for additional information.
+
 3. Start application.
 
        npm start
