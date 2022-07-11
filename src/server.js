@@ -32,12 +32,11 @@ app.use('/visualize', (req, res) => {
     const publicFilepath = path.join(__dirname, '..', 'public');
 
     const objFilename = 'wind-turbine.obj';
-    const objFilepath = path.join(publicFilepath, objFilename);
 
     const furlTransformsFilename = 'furl-transforms.json';
     const furlTransformsFilepath = path.join(publicFilepath, furlTransformsFilename);
     
-    visualize(objFilepath, furlTransformsFilepath).then((stdout) => {
+    visualize(publicFilepath, objFilename, furlTransformsFilename).then((stdout) => {
         console.log(stdout);
         const furlTransforms = JSON.parse(fs.readFileSync(furlTransformsFilepath))
         res.status(200).send({ objUrl: objFilename, furlTransforms });
