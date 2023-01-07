@@ -1,9 +1,9 @@
-const { app, BrowserWindow } = require('electron');
-const server = require('./server');
+const { app: electronApp, BrowserWindow } = require('electron');
+const api = require('./api');
 
-server.listen(3000, () => console.log('Visit http://127.0.0.1:3000'));
+const server = api.listen();
 
-function createWindow () {
+function createWindow() {
   const window = new BrowserWindow({
     width: 800,
     height: 600,
@@ -11,19 +11,20 @@ function createWindow () {
       nodeIntegration: false
     }
   });
-
-  window.loadURL('http://127.0.0.1:3000');
+  const url = `http://127.0.0.1:${server.address().port}`;
+  console.log(`Server running at ${url}.`);
+  window.loadURL(url);
 }
 
-app.whenReady().then(createWindow);
+electronApp.whenReady().then(createWindow);
 
-app.on('window-all-closed', () => {
+electronApp.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    app.quit();
+    electronApp.quit();
   }
 });
 
-app.on('activate', () => {
+electronApp.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }

@@ -16,5 +16,6 @@ from openafpm_cad_core.app import WindTurbine, get_default_parameters
 print(json.dumps({
     WindTurbine.T_SHAPE.value: get_default_parameters(WindTurbine.T_SHAPE),
     WindTurbine.H_SHAPE.value: get_default_parameters(WindTurbine.H_SHAPE),
-    WindTurbine.STAR_SHAPE.value: get_default_parameters(WindTurbine.STAR_SHAPE)
+    WindTurbine.STAR_SHAPE.value: get_default_parameters(WindTurbine.STAR_SHAPE),
+    WindTurbine.T_SHAPE_2F.value: get_default_parameters(WindTurbine.T_SHAPE_2F)
 }, indent=2))

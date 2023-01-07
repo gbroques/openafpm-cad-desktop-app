@@ -4,18 +4,18 @@ const fs = require('fs');
 const express = require('express');
 require('dotenv').config();
 
-const app = express();
-app.use(express.json());
+const api = express();
+api.use(express.json());
 
 const rootPath = path.join(__dirname, '..');
 
-app.use(express.static(path.join(rootPath, 'public')));
+api.use(express.static(path.join(rootPath, 'public')));
 
-app.use('/openafpm-cad-visualization.js', (req, res) => {
+api.use('/openafpm-cad-visualization.js', (req, res) => {
     res.sendFile(path.join(rootPath, 'node_modules', 'openafpm-cad-visualization', 'public', 'openafpm-cad-visualization.js'))
 });
 
-app.use('/defaultparameters', (req, res) => {
+api.use('/defaultparameters', (req, res) => {
     getDefaultParameters().then(defaultParameters => {
         res.status(200).send(JSON.parse(defaultParameters));
     }).catch(err => {
@@ -24,8 +24,8 @@ app.use('/defaultparameters', (req, res) => {
     });
 });
 
-app.use('/visualize', (req, res) => {
-    const json = JSON.stringify(req.body);
+api.use('/visualize', (req, res) => {
+    const json = JSON.stringify(req.body, null, 4);
     const parametersFilepath = path.join(__dirname, 'parameters.json');
     fs.writeFileSync(parametersFilepath, json);
     
@@ -76,4 +76,4 @@ function execPythonScript(scriptName, ...args) {
     });
 }
 
-module.exports = app;
+module.exports = api;

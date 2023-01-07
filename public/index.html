@@ -208,6 +208,7 @@
                         <option value="T Shape">T Shape</option>
                         <option value="H Shape">H Shape</option>
                         <option value="Star Shape">Star Shape</option>
+                        <option value="T Shape 2F">T Shape 2F</option>
                     </select>
                 </label>
                 <fieldset>
@@ -216,6 +217,10 @@
                         <label>
                             Rotor Disk Radius
                             <input type="text" name="RotorDiskRadius">
+                        </label>
+                        <label>
+                            Rotor Disk Inner Radius
+                            <input type="text" name="RotorDiskInnerRadius">
                         </label>
                         <label>
                             Disk Thickness
@@ -237,6 +242,10 @@
                         </label>
                     </section>
                     <section>
+                        <label>
+                            Magnet Material
+                            <input type="text" name="MagnetMaterial">
+                        </label>
                         <label>
                             Number Magnet
                             <input type="text" name="NumberMagnet">
@@ -443,7 +452,8 @@
         const WindTurbine = {
             T_SHAPE: 'T Shape',
             H_SHAPE: 'H Shape',
-            STAR_SHAPE: 'Star Shape'
+            STAR_SHAPE: 'Star Shape',
+            T_SHAPE_2F: 'T Shape 2F'
         };
         const form = window.document.forms[0];
         const defaultVariant = WindTurbine.T_SHAPE;
@@ -496,9 +506,10 @@
             });
             const parameters = parametersByVariant[state.selectedVariant];
             const groupByKey = flattenToGroupByKey(parameters);
+            const valueTransformer = value => isNaN(value) ? value : parseFloat(value);
             const parameterByGroup = createdNestedObject(valueByKey,
                 key => groupByKey[key],
-                parseFloat);
+                valueTransformer);
             const body = JSON.stringify(parameterByGroup);
 
             fetch(event.target.action, {

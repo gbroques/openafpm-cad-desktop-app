@@ -4,7 +4,7 @@ A desktop application for quickly testing the integration between [openafpm-cad-
 
 ## Prerequisites
 1. Install [Node.js](https://nodejs.org/en/).
-2. Install [FreeCAD 18.4](https://github.com/FreeCAD/FreeCAD/releases/tag/0.18.4).
+2. Install [FreeCAD 20](https://github.com/FreeCAD/FreeCAD/releases/tag/0.20).
 3. Install [openafpm-cad-core](https://github.com/gbroques/openafpm-cad-core).
 
 ## How to Run
@@ -28,7 +28,7 @@ A desktop application for quickly testing the integration between [openafpm-cad-
     On Linux, you can download and extract [the latest AppImage](https://github.com/FreeCAD/FreeCAD/releases/tag/0.20) for the `squashfs-root` directory seen in the above example.
 
     ```
-    chmod +x ./FreeCAD-0.20.0-Linux-x86_64.AppImage
+    chmod a+x ./FreeCAD-0.20.0-Linux-x86_64.AppImage
     ./FreeCAD-0.20.0-Linux-x86_64.AppImage --appimage-extract
     ```
 
