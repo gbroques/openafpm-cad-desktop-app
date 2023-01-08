@@ -8,14 +8,10 @@ const api = express();
 api.use(express.json());
 
 const rootPath = path.join(__dirname, '..');
-
 api.use(express.static(path.join(rootPath, 'public')));
+api.use('/web_modules', express.static(path.join(rootPath, 'node_modules')))
 
-api.use('/openafpm-cad-visualization.js', (req, res) => {
-    res.sendFile(path.join(rootPath, 'node_modules', 'openafpm-cad-visualization', 'public', 'openafpm-cad-visualization.js'))
-});
-
-api.use('/defaultparameters', (req, res) => {
+api.get('/defaultparameters', (req, res) => {
     getDefaultParameters().then(defaultParameters => {
         res.status(200).send(JSON.parse(defaultParameters));
     }).catch(err => {
@@ -24,7 +20,7 @@ api.use('/defaultparameters', (req, res) => {
     });
 });
 
-api.use('/visualize', (req, res) => {
+api.post('/visualize', (req, res) => {
     const json = JSON.stringify(req.body, null, 4);
     const parametersFilepath = path.join(__dirname, 'parameters.json');
     fs.writeFileSync(parametersFilepath, json);

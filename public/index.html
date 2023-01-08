@@ -188,12 +188,6 @@
 </head>
 <body>
     <nav>
-        <button class="active" onclick="selectTab(event)">
-            Inputs
-        </button>
-        <button onclick="selectTab(event)">
-            Visualize
-        </button>
     </nav>
     <div class="container tabcontent">
         <header>
@@ -429,26 +423,15 @@
             </button>
         </form>
     </div>
-    <script src="openafpm-cad-visualization.js"></script>
-    <script>
-        function loadObj(objUrl, furlTransforms) {
-            const tabs = document.getElementsByTagName('nav')[0];
-            const tabsHeight = tabs.offsetHeight;
-            const windTurbineVisualization = new OpenAfpmCadVisualization({
-                objUrl,
-                rootDomElement: window.document.getElementById('visualization-root'),
-                width: window.innerWidth,
-                height: window.innerHeight - tabsHeight,
-                furlTransforms
-            });
-            window.addEventListener('resize', () => {
-                windTurbineVisualization.resize(window.innerWidth, window.innerHeight - tabsHeight)
-            }, false);
-            window.addEventListener('mousemove', (e) => {
-                windTurbineVisualization.handleMouseMove(e)
-            }, false);
+    <script type="importmap">
+        {
+          "imports": {
+            "openafpm-cad-visualization": "./web_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js"
+          }
         }
-
+    </script>
+    <script type="module">
+        import OpenAfpmCadVisualization from 'openafpm-cad-visualization';
         const WindTurbine = {
             T_SHAPE: 'T Shape',
             H_SHAPE: 'H Shape',
@@ -608,7 +591,34 @@
                 }, ms);
             };
         }
-
+        // Build tabs
+        const tabs = document.getElementsByTagName('nav')[0];
+        const inputsTab = document.createElement('button');
+        inputsTab.className = 'active';
+        inputsTab.innerText = 'Inputs';
+        tabs.appendChild(inputsTab);
+        const visualizeTab = document.createElement('button');
+        visualizeTab.innerText = 'Visualize';
+        tabs.appendChild(visualizeTab);
+        const tabsHeight = tabs.offsetHeight;
+        const openAfpmCadVisualization = new OpenAfpmCadVisualization({
+            rootDomElement: window.document.getElementById('visualization-root'),
+            width: window.innerWidth,
+            height: window.innerHeight - tabsHeight
+        });
+        const handleResize = () => {
+            openAfpmCadVisualization.resize(window.innerWidth, window.innerHeight - tabsHeight);
+        };
+        window.addEventListener('resize', handleResize, false);
+        function loadObj(objUrl, furlTransforms) {
+            openAfpmCadVisualization.visualize(objUrl, 'WindTurbine', {furl: furlTransforms});
+            const handleMouseMove = (event) => {
+                openAfpmCadVisualization.handleMouseMove(event)
+            };
+            window.addEventListener('mousemove', handleMouseMove, false);
+            return () => window.removeEventListener('mousemove', handleMouseMove);
+        }
+        let cleanUp = null;
         function selectTab(event) {
             const selectedTab = event.target;
             const parent = selectedTab.parentElement;
@@ -633,7 +643,8 @@
             if (state.objUrl && selectedTabIndex == 1) {
                 const visualization = document.getElementById('visualization-root');
                 const load = () => {
-                    loadObj(state.objUrl, state.furlTransforms);
+                    if (cleanUp) cleanUp();
+                    cleanUp = loadObj(state.objUrl, state.furlTransforms);
                     state.prevForm = state.form;
                 };
                 if (visualization.children.length === 0) {
@@ -645,6 +656,8 @@
                 }
             }
         }
+        inputsTab.addEventListener('click', selectTab);
+        visualizeTab.addEventListener('click', selectTab);
     </script>
 </body>
 </html>
