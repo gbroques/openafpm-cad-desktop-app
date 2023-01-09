@@ -1,6 +1,6 @@
 node_modules/
-src/parameters.json
-public/furl-transforms.json
+backend/parameters.json
+frontend/furl-transforms.json
 .vscode/
 *.obj
 *.FCStd*

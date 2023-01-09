@@ -6,8 +6,8 @@
 # Print executed commands 
 set -x
 
-rm public/furl-transforms.json \
-  public/wind-turbine.obj \
-  public/WindTurbine.zip
+rm frontend/furl-transforms.json \
+  frontend/wind-turbine.obj \
+  frontend/WindTurbine.zip
 
-rm src/parameters.json
+rm backend/parameters.json

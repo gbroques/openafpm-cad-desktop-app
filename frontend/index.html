@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<!-- https://lukelowrey.com/css-variable-theme-switcher/ -->
+<html data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <title>OpenAFPM CAD Visualization</title>
+    <style>
+      :root {
+        --spacing: 8px;
+        --transition-duration-standard: 250ms;
+        /**
+         * Typography based on modular scale factor of 1.2,
+         * also known as the Minor Third.
+         * @see {@link https://www.modularscale.com/?16&px&1.2}
+         */
+        --h1: 2.074rem;
+        --h2: 1.728rem;
+        --h3: 1.44rem;
+        --h4: 1.2rem;
+        --h5: 1rem;
+        --h6: 0.833rem;
+      }
+      html[data-theme='light'] {
+        --primary-color-main: #43A047; /* Green 600 - https://www.materialui.co/colors */
+        --primary-color-dark: #388E3C; /* Green 700 - https://www.materialui.co/colors */
+        --background-default: #FFFFFF;
+        --background-paper: #DCDCDC; /* gainsboro - https://www.materialui.co/htmlcolors */
+        --background-disabled: rgba(0, 0, 0, 0.12);
+        --text-color: rgba(0, 0, 0, 0.87);
+        --text-disabled: rgba(0, 0, 0, 0.38);
+        --divider: rgba(0, 0, 0, 0.12);
+      }
+      html[data-theme='dark'] {
+        --primary-color-main: #69F0AE; /* Green A200 - https://www.materialui.co/colors */
+        --primary-color-dark: #00E676; /* Green A400 - https://www.materialui.co/colors */
+        --background-default: #303030;
+        --background-paper: #424242;
+        --background-disabled: rgba(255, 255, 255, 0.12);
+        --text-color: #FFFFFF;
+        --text-disabled: rgba(255, 255, 255, 0.5);
+        --divider: rgba(255, 255, 255, 0.12);
+      }
+      html {
+        font-size: 16px;
+      }
+      body {
+        color: var(--text-color);
+        background: var(--background-default);
+        margin: 0;
+        font-family: sans-serif;
+      }
+      .empty-state {
+        text-align: center;
+        padding-top: 25vh;
+      }
+      #loading-spinner {
+        display: inline-block;
+        width: 35px;
+        height: 35px;
+        border: 3px solid var(--primary-color-main);
+        border-radius: 50%;
+        border-right-color: transparent;
+        animation: spin 1s ease infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      @-webkit-keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+</head>
+<body>
+  <x-app>
+    <div id="visualization-root">
+      <div class="empty-state">
+        <div id="loading-spinner"></div>
+        <x-wind-turbine-icon size="65" fill="#9E9E9E" ></x-wind-turbine-icon>
+        <p style="font-size: var(--h2); font-weight: bold;">No Visualization</p>
+        <p style="font-size: 1rem;">Click <strong>Visualize</strong> button on <strong>Inputs</strong> tab.</p>
+      </div>
+    </div>
+  </x-app>
+  <script type="importmap">
+    {
+      "imports": {
+        "lit": "./web_modules/lit/index.js",
+        "lit-html": "./web_modules/lit-html/lit-html.js",
+        "lit-html/": "./web_modules/lit-html/",
+        "lit-element/": "./web_modules/lit-element/",
+        "@lit/reactive-element": "./web_modules/@lit/reactive-element/reactive-element.js",
+        "openafpm-cad-visualization": "./web_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js"
+      }
+    }
+  </script>
+  <script type="module" src="app.js"></script>
+  <script>
+    window.addEventListener('load', handleLoad);
+    function handleLoad() {
+      document.getElementById('loading-spinner').remove();
+      import('./web_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js')
+        .then(setup);
+    }
+    function setup({default: OpenAfpmCadVisualization}) {
+      const app = document.querySelector('x-app');
+      const tabsHeight = app.renderRoot.querySelector('x-tabs').offsetHeight;
+      const visualizationRoot = window.document.getElementById('visualization-root');
+      const openAfpmCadVisualization = new OpenAfpmCadVisualization({
+        rootDomElement: visualizationRoot,
+        width: window.innerWidth,
+        height: window.innerHeight - tabsHeight
+      });
+      let cleanUp = null;
+      app.addEventListener('visualize', (e) => {
+        if (cleanUp) cleanUp();
+        visualizationRoot.innerHTML = '';
+        const {objUrl, furlTransforms} = e.detail;
+        openAfpmCadVisualization.visualize(objUrl, 'WindTurbine', {furl: furlTransforms});
+        if (!window.onresize) {
+          const handleResize = () => openAfpmCadVisualization.resize(window.innerWidth, window.innerHeight - tabsHeight);
+          window.onresize = handleResize();
+          handleResize();
+        }
+        const handleMouseMove = (event) => openAfpmCadVisualization.handleMouseMove(event);
+        window.addEventListener('mousemove', handleMouseMove, false);
+        cleanUp = () => window.removeEventListener('mousemove', handleMouseMove);
+      });
+    }
+  </script>
+</body>
+</html>
