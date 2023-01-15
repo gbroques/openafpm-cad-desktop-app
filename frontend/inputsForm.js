@@ -86,6 +86,7 @@ class InputsForm extends LitElement {
     input:disabled, select:disabled {
       background-color: var(--background-disabled);
       color: var(--text-disabled);
+      opacity: 1;
     }
     x-button::part(button) {
       padding: calc(var(--spacing) * 3);
@@ -101,11 +102,8 @@ class InputsForm extends LitElement {
   handleSelect(event) {
     const selectedVariant = event.target.value; 
     this._variant = selectedVariant;
-    console.log('this._parametersByVariant', this._parametersByVariant)
     const parameters = this._parametersByVariant[selectedVariant];
-    console.log('parameters', this._parametersByVariant)
     this._form = flatten(parameters);
-    console.log('this._form', this._form)
   }
   handleCloseError() {
     this._errorMessage = '';
