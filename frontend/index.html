@@ -21,8 +21,8 @@
         --h6: 0.833rem;
       }
       html[data-theme='light'] {
-        --primary-color-main: #43A047; /* Green 600 - https://www.materialui.co/colors */
-        --primary-color-dark: #388E3C; /* Green 700 - https://www.materialui.co/colors */
+        --primary-color-main: #4CAF50; /* Green 500 - https://www.materialui.co/colors */
+        --primary-color-dark: #43A047; /* Green 600 - https://www.materialui.co/colors */
         --background-default: #FFFFFF;
         --background-paper: #DCDCDC; /* gainsboro - https://www.materialui.co/htmlcolors */
         --background-disabled: rgba(0, 0, 0, 0.12);
@@ -31,8 +31,8 @@
         --divider: rgba(0, 0, 0, 0.12);
       }
       html[data-theme='dark'] {
-        --primary-color-main: #69F0AE; /* Green A200 - https://www.materialui.co/colors */
-        --primary-color-dark: #00E676; /* Green A400 - https://www.materialui.co/colors */
+        --primary-color-main: #A5D6A7; /* Green 200 - https://www.materialui.co/colors */
+        --primary-color-dark: #81C784; /* Green 300 - https://www.materialui.co/colors */
         --background-default: #303030;
         --background-paper: #424242;
         --background-disabled: rgba(255, 255, 255, 0.12);
@@ -46,8 +46,21 @@
       body {
         color: var(--text-color);
         background: var(--background-default);
+        transition: var(--transition-duration-standard) ease-in-out;
         margin: 0;
         font-family: sans-serif;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--primary-color-main);
+        color: var(--background-default);
+        font-size: 1rem;
+        font-weight: bold;
+        padding: calc(var(--spacing) * 2);
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
+        transition: var(--transition-duration-standard) ease-in-out;
       }
       .empty-state {
         text-align: center;
@@ -57,7 +70,7 @@
         display: inline-block;
         width: 35px;
         height: 35px;
-        border: 3px solid var(--primary-color-main);
+        border: 3px solid var(--secondary-color-main);
         border-radius: 50%;
         border-right-color: transparent;
         animation: spin 1s ease infinite;
@@ -71,6 +84,10 @@
     </style>
 </head>
 <body>
+  <header>
+    OpenAFPM CAD Visualization
+    <x-theme-toggle></x-theme-toggle>
+  </header>
   <x-app>
     <div id="visualization-root">
       <div class="empty-state">
@@ -93,32 +110,56 @@
       }
     }
   </script>
+  <script type="module" src="themeToggle.js"></script>
   <script type="module" src="app.js"></script>
   <script>
-    window.addEventListener('load', handleLoad);
+    // Setup theme toggle.
+    const themeToggle = document.querySelector("x-theme-toggle");
+    const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    const presetTheme = localStorage.getItem("theme") || preferredTheme;
+    const setTheme = theme => {
+      document.documentElement.setAttribute("data-theme", theme);
+      themeToggle.setAttribute("theme", theme);
+    };
+    if (presetTheme) setTheme(presetTheme);
+    themeToggle.addEventListener("click", () => {
+      const currentTheme = document.documentElement.getAttribute("data-theme");
+      const targetTheme = currentTheme === "light" ? "dark" : "light";
+      setTheme(targetTheme);
+      localStorage.setItem("theme", targetTheme);
+    });
+  </script>
+  <script>
+    // Setup app.
+    window.addEventListener("load", handleLoad);
     function handleLoad() {
-      document.getElementById('loading-spinner').remove();
-      import('./web_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js')
+      document.getElementById("loading-spinner").remove();
+      import("./web_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js")
         .then(setup);
     }
     function setup({default: OpenAfpmCadVisualization}) {
-      const app = document.querySelector('x-app');
-      const tabsHeight = app.renderRoot.querySelector('x-tabs').offsetHeight;
-      const visualizationRoot = window.document.getElementById('visualization-root');
+      const app = document.querySelector("x-app");
+      const calculateHeight = () => {
+        const headerHeight = document.querySelector("header").offsetHeight;
+        const tabsHeight = app.renderRoot.querySelector("x-tabs").offsetHeight;
+        const offsetHeight = headerHeight + tabsHeight;
+        return window.innerHeight - offsetHeight;
+      };
+      const visualizationRoot = window.document.getElementById("visualization-root");
       const openAfpmCadVisualization = new OpenAfpmCadVisualization({
         rootDomElement: visualizationRoot,
         width: window.innerWidth,
-        height: window.innerHeight - tabsHeight
+        height: calculateHeight()
       });
       let cleanUp = null;
-      app.addEventListener('visualize', (e) => {
+      app.addEventListener("visualize", (e) => {
         if (cleanUp) cleanUp();
-        visualizationRoot.innerHTML = '';
+        visualizationRoot.innerHTML = "";
         const {objUrl, furlTransforms} = e.detail;
-        openAfpmCadVisualization.visualize(objUrl, 'WindTurbine', {furl: furlTransforms});
+        openAfpmCadVisualization.visualize(objUrl, "WindTurbine", {furl: furlTransforms});
         if (!window.onresize) {
-          const handleResize = () => openAfpmCadVisualization.resize(window.innerWidth, window.innerHeight - tabsHeight);
-          window.onresize = handleResize();
+          const handleResize = () => openAfpmCadVisualization.resize(window.innerWidth, calculateHeight());
+          window.onresize = handleResize;
           handleResize();
         }
         const handleMouseMove = (event) => openAfpmCadVisualization.handleMouseMove(event);

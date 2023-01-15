@@ -47,7 +47,7 @@ export default class App extends LitElement {
       </x-tabs>
       <x-tab-panel ?visible=${this._tab === Tab.Inputs}>
         <x-container>
-          <x-header></x-header>
+          <!-- <x-header></x-header> -->
           <x-inputs-form @visualize=${this.handleVisualize}></x-inputs-form>
         </x-container>
       </x-tab-panel>
