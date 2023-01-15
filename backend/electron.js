@@ -1,4 +1,5 @@
 const { app: electronApp, BrowserWindow } = require('electron');
+const path = require('path');
 const api = require('./api');
 
 const server = api.listen();
@@ -9,7 +10,8 @@ function createWindow() {
     height: 600,
     webPreferences: {
       nodeIntegration: false
-    }
+    },
+    icon: path.join(__dirname, 'icon.png')
   });
   const url = `http://127.0.0.1:${server.address().port}`;
   console.log(`Server running at ${url}.`);
