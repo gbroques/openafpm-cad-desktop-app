@@ -1,13 +1,6 @@
 import { LitElement, html, css } from "lit";
 
 class Tabs extends LitElement {
-  static properties = {
-    height: { type: String }
-  };
-  constructor() {
-    super();
-    this.height = 'auto';
-  }
   static styles = css`
     nav {
       display: flex;
@@ -18,14 +11,20 @@ class Tabs extends LitElement {
     }
   `;
   handleSelect(event) {
-    const children = this._children;
-    const selectedIndex = children.indexOf(event.target);
-    const selectedValue = children[selectedIndex].getAttribute('value');
-    this.dispatchEvent(new CustomEvent('select', {
-      detail: {selectedIndex, selectedValue},
-      bubbles: true,
-      composed: true
-    }));
+    // guard against click events for slot or x-tabs.
+    // ensure event.target is an x-tab element.
+    if (event.eventPhase === Event.BUBBLING_PHASE) {
+      const children = this._children;
+      const selectedIndex = children.indexOf(event.target);
+      if (children[selectedIndex]) {
+        const selectedValue = children[selectedIndex].getAttribute('value');
+        this.dispatchEvent(new CustomEvent('select', {
+          detail: {selectedIndex, selectedValue},
+          bubbles: true,
+          composed: true
+        }));
+      }
+    }
   }
   get _children() {
     const slot = this.shadowRoot.querySelector('slot');
@@ -33,7 +32,7 @@ class Tabs extends LitElement {
   }
   render() {
     return html`
-      <nav style="height: ${this.height};">
+      <nav>
         <slot @click=${this.handleSelect}></slot>
       </nav>
     `;

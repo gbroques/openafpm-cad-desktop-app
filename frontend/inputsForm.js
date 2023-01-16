@@ -174,7 +174,6 @@ class InputsForm extends LitElement {
           Preset
           <select
             name="Variant"
-            .value=${this._variant}
             @change=${this.handleSelect}
             ?disabled=${this._isLoading}
             class="variantSelect"
@@ -259,7 +258,6 @@ class InputsForm extends LitElement {
               Magnet Material
               <select
                 name="MagnetMaterial"
-                .value=${this._form["MagnetMaterial"]}
                 ?disabled=${this._isLoading}
                 @change=${this.handleValueChange}>
                 <option value="Neodymium" ?selected=${this._form["MagnetMaterial"] === "Neodymium"}>
