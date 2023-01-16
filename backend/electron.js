@@ -1,7 +1,8 @@
-const { app: electronApp, BrowserWindow } = require('electron');
+const { app: electronApp, BrowserWindow, nativeTheme } = require('electron');
 const path = require('path');
 const api = require('./api');
 
+nativeTheme.themeSource = 'light';
 const server = api.listen();
 
 function createWindow() {

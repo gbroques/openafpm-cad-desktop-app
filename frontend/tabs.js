@@ -8,6 +8,8 @@ class Tabs extends LitElement {
       font-size: 0.833rem;
       font-weight: bold;
       text-transform: uppercase;
+      transition: background-color var(--transition-duration-standard) ease-in-out;
+      background-color: var(--background-navigation);
     }
   `;
   handleSelect(event) {

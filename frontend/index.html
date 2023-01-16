@@ -24,6 +24,7 @@
         --primary-color-main: #4CAF50; /* Green 500 - https://www.materialui.co/colors */
         --primary-color-dark: #43A047; /* Green 600 - https://www.materialui.co/colors */
         --background-default: #FFFFFF;
+        --background-navigation: #FFFFFF;
         --background-paper: #DCDCDC; /* gainsboro - https://www.materialui.co/htmlcolors */
         --background-disabled: rgba(0, 0, 0, 0.12);
         --text-color: rgba(0, 0, 0, 0.87);
@@ -33,7 +34,8 @@
       html[data-theme='dark'] {
         --primary-color-main: #A5D6A7; /* Green 200 - https://www.materialui.co/colors */
         --primary-color-dark: #81C784; /* Green 300 - https://www.materialui.co/colors */
-        --background-default: #303030;
+        --background-default: #212121;
+        --background-navigation: #303030;
         --background-paper: #424242;
         --background-disabled: rgba(255, 255, 255, 0.12);
         --text-color: #FFFFFF;
@@ -116,12 +118,14 @@
   <script>
     // Setup theme toggle.
     const themeToggle = document.querySelector("x-theme-toggle");
+    const visualizationRoot = document.getElementById("visualization-root");
+    const setTheme = theme => {
+      themeToggle.setAttribute("theme", theme);
+      document.documentElement.setAttribute("data-theme", theme);
+      visualizationRoot.setAttribute("data-theme", theme);
+    };
     const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     const presetTheme = localStorage.getItem("theme") || preferredTheme;
-    const setTheme = theme => {
-      document.documentElement.setAttribute("data-theme", theme);
-      themeToggle.setAttribute("theme", theme);
-    };
     if (presetTheme) setTheme(presetTheme);
     themeToggle.addEventListener("click", () => {
       const currentTheme = document.documentElement.getAttribute("data-theme");
@@ -129,8 +133,7 @@
       setTheme(targetTheme);
       localStorage.setItem("theme", targetTheme);
     });
-  </script>
-  <script>
+
     // Setup app.
     window.addEventListener("load", handleLoad);
     function handleLoad() {
@@ -150,7 +153,6 @@
         const offsetHeight = headerHeight + tabsHeight;
         return window.innerHeight - offsetHeight;
       }
-      const visualizationRoot = window.document.getElementById("visualization-root");
       const openAfpmCadVisualization = new OpenAfpmCadVisualization({
         rootDomElement: visualizationRoot,
         width: calculateWidth(),
