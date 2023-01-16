@@ -171,7 +171,7 @@ class InputsForm extends LitElement {
     return html`
       <form action="visualize" method="post" @submit=${this.handleSubmit}>
         <label>
-          Wind Turbine
+          Preset
           <select
             name="Variant"
             .value=${this._variant}
@@ -179,10 +179,10 @@ class InputsForm extends LitElement {
             ?disabled=${this._isLoading}
             class="variantSelect"
           >
-            <option value="T Shape">T Shape</option>
-            <option value="H Shape">H Shape</option>
-            <option value="Star Shape">Star Shape</option>
-            <option value="T Shape 2F">T Shape 2F</option>
+            <option value="T Shape" ?selected=${this._variant === "T Shape"}>T Shape</option>
+            <option value="H Shape" ?selected=${this._variant === "H Shape"}>H Shape</option>
+            <option value="Star Shape" ?selected=${this._variant === "Star Shape"}>Star Shape</option>
+            <option value="T Shape 2F" ?selected=${this._variant === "T Shape 2F"}>T Shape 2F</option>
           </select>
         </label>
         <fieldset>
@@ -262,10 +262,10 @@ class InputsForm extends LitElement {
                 .value=${this._form["MagnetMaterial"]}
                 ?disabled=${this._isLoading}
                 @change=${this.handleValueChange}>
-                <option value="Neodymium">
+                <option value="Neodymium" ?selected=${this._form["MagnetMaterial"] === "Neodymium"}>
                   Neodymium
                 </option>
-                <option value="Ferrite">
+                <option value="Ferrite" ?selected=${this._form["MagnetMaterial"] === "Ferrite"}>
                   Ferrite
                 </option>
               </select>

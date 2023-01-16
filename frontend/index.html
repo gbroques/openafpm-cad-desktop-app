@@ -42,6 +42,7 @@
       }
       html {
         font-size: 16px;
+        overflow-y: scroll;
       }
       body {
         color: var(--text-color);
@@ -139,32 +140,41 @@
     }
     function setup({default: OpenAfpmCadVisualization}) {
       const app = document.querySelector("x-app");
-      const calculateHeight = () => {
+      function calculateWidth() {
+        // Get the width of document (without the scrollbar).
+        return document.documentElement.clientWidth;
+      }
+      function calculateHeight() {
         const headerHeight = document.querySelector("header").offsetHeight;
         const tabsHeight = app.renderRoot.querySelector("x-tabs").offsetHeight;
         const offsetHeight = headerHeight + tabsHeight;
         return window.innerHeight - offsetHeight;
-      };
+      }
       const visualizationRoot = window.document.getElementById("visualization-root");
       const openAfpmCadVisualization = new OpenAfpmCadVisualization({
         rootDomElement: visualizationRoot,
-        width: window.innerWidth,
+        width: calculateWidth(),
         height: calculateHeight()
       });
+      const handleResize = () => {
+        const width = calculateWidth();
+        const height = calculateHeight();
+        openAfpmCadVisualization.resize(width, height);
+      };
+      window.addEventListener("resize", handleResize, false);
+
       let cleanUp = null;
       app.addEventListener("visualize", (e) => {
         if (cleanUp) cleanUp();
         visualizationRoot.innerHTML = "";
         const {objUrl, furlTransforms} = e.detail;
         openAfpmCadVisualization.visualize(objUrl, "WindTurbine", {furl: furlTransforms});
-        if (!window.onresize) {
-          const handleResize = () => openAfpmCadVisualization.resize(window.innerWidth, calculateHeight());
-          window.onresize = handleResize;
-          handleResize();
-        }
+        handleResize();
         const handleMouseMove = (event) => openAfpmCadVisualization.handleMouseMove(event);
-        window.addEventListener('mousemove', handleMouseMove, false);
-        cleanUp = () => window.removeEventListener('mousemove', handleMouseMove);
+        window.addEventListener("mousemove", handleMouseMove, false);
+        cleanUp = () => {
+          window.removeEventListener("mousemove", handleMouseMove);
+        };
       });
     }
   </script>

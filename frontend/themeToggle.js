@@ -53,10 +53,8 @@ class ThemeToggle extends LitElement {
     .checkbox:checked + .switch::after {
       transform: translateX(160%);
     }
-    .checkbox + .switch {
-      --switch-color: var(--background-default);
-    }
     .icon {
+      transition: fill var(--transition-duration-standard) ease-in-out;
       fill: var(--background-default);
     }
   `;
