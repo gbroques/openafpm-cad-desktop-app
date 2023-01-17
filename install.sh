@@ -100,6 +100,8 @@ if [ ! -f '.env' ]; then
     freecad_lib_directory=$(get_path FreeCAD.so | xargs -0 dirname)
   else
     validate_command_exists cygpath
+    # cygpath is needed to convert posix paths to windows paths for .env file
+    # for example /c/path/to/python.exe -> C:\path\to\python.exe
     python_path=$(cygpath -w `realpath "$extracted_directory/bin/python.exe"`)
     freecad_lib_directory=$(cygpath -w $(get_path FreeCADApp.dll | xargs -0 dirname))
   fi

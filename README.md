@@ -12,7 +12,7 @@ A desktop application for quickly testing the integration between [openafpm-cad-
 
        ./install.sh
 
-    Currently the `install.sh` script only supports Linux and Windows.
+    Currently the `install.sh` script only supports Linux and Windows (via [Git for Windows](https://gitforwindows.org/)).
 
 ## How to Run
 
