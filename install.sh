@@ -24,7 +24,7 @@ validate_command_exists curl
 
 is_linux()
 {
-  [ "$(uname --kernel-name)" == "Linux" ]
+  [ "$(uname --kernel-name)" = "Linux" ]
 }
 
 if is_linux; then
