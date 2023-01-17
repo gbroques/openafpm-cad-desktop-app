@@ -4,39 +4,19 @@ A desktop application for quickly testing the integration between [openafpm-cad-
 
 ## Prerequisites
 1. Install [Node.js](https://nodejs.org/en/).
-2. Install [FreeCAD 20](https://github.com/FreeCAD/FreeCAD/releases/tag/0.20).
-3. Install [openafpm-cad-core](https://github.com/gbroques/openafpm-cad-core).
-
-## How to Run
-1. Install dependencies.
+2. Install dependencies.
 
        npm install
 
-2. Create a `.env` file in the root of this repository with the following environment variables:
+3. Install [FreeCAD](https://github.com/FreeCAD/FreeCAD/releases/tag/0.20), [openafpm-cad-core](https://github.com/gbroques/openafpm-cad-core) module, and create `.env` file.
 
-    1. `PYTHON` - Path to Python executable. **Must** be compatible with version of `python` FreeCAD uses.
-    2. `FREECAD_LIB` - Path to FreeCAD lib directory.
+       ./install.sh
 
-    An example `.env` file may look like:
-    ```
-    PYTHON=/home/g/Desktop/squashfs-root/usr/bin/python
-    FREECAD_LIB=/home/g/Desktop/squashfs-root/usr/lib/
-    ```
+    Currently the `install.sh` script only supports Linux and Windows.
 
-    See `.env.example`.
+## How to Run
 
-    On Linux, you can download and extract [the latest AppImage](https://github.com/FreeCAD/FreeCAD/releases/tag/0.20) for the `squashfs-root` directory seen in the above example.
-
-    ```
-    chmod a+x ./FreeCAD-0.20.0-Linux-x86_64.AppImage
-    ./FreeCAD-0.20.0-Linux-x86_64.AppImage --appimage-extract
-    ```
-
-    Clone or symlink `openafpm-cad-core` and [`freecad-to-obj`](https://github.com/gbroques/freecad-to-obj) to FreeCAD Mod directory. See [Installing more workbenches](https://wiki.freecadweb.org/Installing_more_workbenches#Installing_for_a_single_user) for additional information.
-
-3. Start application.
-
-       npm start
+    npm start
 
 ## Related Repositories
 

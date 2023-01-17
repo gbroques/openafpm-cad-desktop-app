@@ -6,3 +6,6 @@ frontend/furl-transforms.json
 *.FCStd*
 .env
 *.zip
+*.AppImage
+squashfs-root
+FreeCAD-portable
