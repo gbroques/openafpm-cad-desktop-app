@@ -109,11 +109,12 @@ class InputsForm extends LitElement {
     this._errorMessage = '';
   }
   firstUpdated() {
-    this.fetch('/defaultparameters')
+    const promise = this.fetch('/defaultparameters')
     .then(parametersByVariant => {
       this._parametersByVariant = parametersByVariant;
       this._form = flatten(parametersByVariant[this._variant]);
     });
+    this.setPromiseToState(promise);
   }
   handleSubmit(event) {
     event.preventDefault();
@@ -130,7 +131,7 @@ class InputsForm extends LitElement {
       valueTransformer);
     const body = JSON.stringify(parameterByGroup);
     this._isLoading = true;
-    this.fetch(event.target.action, {
+    const promise = this.fetch(event.target.action, {
       body,
       headers: {
         'Content-Type': 'application/json',
@@ -143,6 +144,16 @@ class InputsForm extends LitElement {
         bubbles: true,
         composed: true
       }));
+    })
+    this.setPromiseToState(promise);
+  }
+  setPromiseToState(promise) {
+    promise
+    .catch(error => {
+      this._errorMessage = error.message;
+    })
+    .finally(() => {
+      this._isLoading = false;
     });
   }
   fetch(...args) {
@@ -153,12 +164,6 @@ class InputsForm extends LitElement {
           throw new Error(r.error);
         }
         return r;
-      })
-      .catch(error => {
-        this._errorMessage = error.message;
-      })
-      .finally(() => {
-        this._isLoading = false;
       });
   }
   handleValueChange(event) {
