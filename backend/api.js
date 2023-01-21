@@ -21,6 +21,15 @@ api.get('/defaultparameters', (req, res) => {
   });
 });
 
+api.get('/parametersschema', (req, res) => {
+  getParametersSchema().then(parametersSchema => {
+    res.status(200).send(JSON.parse(parametersSchema));
+  }).catch(err => {
+    console.error(err);
+    res.status(500).send({ error: err.toString() });
+  });
+});
+
 api.post('/visualize', (req, res) => {
   const json = JSON.stringify(req.body, null, 4);
   const parametersFilepath = path.join(__dirname, 'parameters.json');
@@ -47,6 +56,10 @@ function visualize(...args) {
 
 function getDefaultParameters() {
   return execPythonScript('get_default_parameters');
+}
+
+function getParametersSchema() {
+  return execPythonScript('get_parameters_schema');
 }
 
 function execPythonScript(scriptName, ...args) {

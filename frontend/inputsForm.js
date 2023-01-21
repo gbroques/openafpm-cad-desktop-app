@@ -1,8 +1,7 @@
 import { LitElement, html, css } from "lit";
+import { ifDefined } from 'lit-html/directives/if-defined.js';
 
-import "./button.js";
 import "./circularProgress.js";
-import initialForm from "./initialForm.js";
 
 const WindTurbine = {
   T_SHAPE: 'T Shape',
@@ -15,6 +14,7 @@ class InputsForm extends LitElement {
   static properties = {
     _variant: { type: String, state: true },
     _parametersByVariant: { type: Object, state: true },
+    _parametersSchema: { type: Object, state: true }, 
     _form: { type: Object, state: true },
     _isLoading: { type: Boolean, state: true },
     _errorMessage: { type: String, state: true }
@@ -23,7 +23,8 @@ class InputsForm extends LitElement {
     super();
     this._variant = WindTurbine.T_SHAPE;
     this._parametersByVariant = {};
-    this._form = initialForm;
+    this._parametersSchema = {};
+    this._form = {};
     this._isLoading = true;
     this._errorMessage = '';
   }
@@ -40,7 +41,7 @@ class InputsForm extends LitElement {
       display: flex;
       flex-direction: column;
       gap: calc(var(--spacing) * 2);
-      margin: 0;
+      margin: 0px 0px calc(var(--spacing) * 2) 0px;
       padding: 0px 0px calc(var(--spacing) * 2) 0px;
       border-top: none;
       border-right: none;
@@ -56,8 +57,10 @@ class InputsForm extends LitElement {
       margin-bottom: calc(var(--spacing) * 2);
     }
     section {
-      display: flex;
+      display: grid;
       gap: calc(var(--spacing) * 2);
+      /* https://css-tricks.com/look-ma-no-media-queries-responsive-layouts-using-css-grid/ */
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     }
     label {
       flex: 1;
@@ -88,15 +91,47 @@ class InputsForm extends LitElement {
       color: var(--text-disabled);
       opacity: 1;
     }
-    x-button::part(button) {
+    input:invalid {
+      outline: 1px solid var(--validation-color-main);
+    }
+    /* duplicate x-button styles since web components don't work nicely with forms */
+    button[type="submit"] {
+      /* base button styles */
+      border: none;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.30);
+      cursor: pointer;
+      width: 100%;
+      transition: var(--transition-duration-standard) ease-in-out;
+
+      /* primary styles */
+      background-color: var(--primary-color-main);
+      color: var(--background-default);
+
       padding: calc(var(--spacing) * 3);
       text-transform: uppercase;
       font-weight: bold;
       border-radius: 4px;
       font-size: var(--h6);
     }
+    button[type="submit"]:hover {
+      background-color: var(--primary-color-dark);
+    }
+    button[type="submit"]:disabled {
+      box-shadow: none;
+      cursor: default;
+      background-color: var(--background-disabled);
+      color: var(--text-disabled);
+    }
     .circularProgress {
       margin-left: calc(var(--spacing) * 2);
+    }
+    .validationMessage {
+      color: var(--validation-color-main);
+      font-weight: normal;
+      font-size: var(--h6);
+      min-height: 16px;
+      margin-bottom: 0;
+      margin-top: calc(var(--spacing) * 1);
     }
   `;
   handleSelect(event) {
@@ -109,10 +144,14 @@ class InputsForm extends LitElement {
     this._errorMessage = '';
   }
   firstUpdated() {
-    const promise = this.fetch('/defaultparameters')
-    .then(parametersByVariant => {
+    const defaultParametersPromise = this.fetch('/defaultparameters')
+    const parametersSchemaPromise = this.fetch('/parametersschema');
+
+    const promise = Promise.all([defaultParametersPromise, parametersSchemaPromise]);
+    promise.then(([parametersByVariant, parametersSchema]) => {
       this._parametersByVariant = parametersByVariant;
       this._form = flatten(parametersByVariant[this._variant]);
+      this._parametersSchema = parametersSchema;
     });
     this.setPromiseToState(promise);
   }
@@ -167,9 +206,17 @@ class InputsForm extends LitElement {
       });
   }
   handleValueChange(event) {
-    const {name, value} = event.target;
+    const {target} = event;
+    if (target.nextElementSibling) {
+      target.nextElementSibling.innerText = target.validationMessage;
+    }
+    const {name, value} = target;
     const form = this._form;
     this._form = {...form, [name]: value};
+  }
+  getGroupParameters(groupName) {
+    const groupProperties = this._parametersSchema?.properties?.[groupName]?.properties ?? {};
+    return Object.entries(groupProperties);
   }
   render() {
     const circularProgressSize = "28px";
@@ -195,180 +242,15 @@ class InputsForm extends LitElement {
             ${this._isLoading ? html`<x-circular-progress size="${circularProgressSize}" class="circularProgress"></x-circular-progress>` : ""}
           </legend>
           <section>
-            <label>
-              Rotor Disk Radius
-              <input
-                type="number"
-                name="RotorDiskRadius"
-                .value=${this._form["RotorDiskRadius"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Rotor Disk Inner Radius
-              <input
-                type="number"
-                name="RotorDiskInnerRadius"
-                .value=${this._form["RotorDiskInnerRadius"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Disk Thickness
-              <input
-                type="number"
-                name="DiskThickness"
-                .value=${this._form["DiskThickness"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-          </section>
-          <section>
-            <label>
-              Magnet Length
-              <input
-                type="number"
-                name="MagnetLength"
-                .value=${this._form["MagnetLength"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Magnet Width
-              <input
-                type="number"
-                name="MagnetWidth"
-                .value=${this._form["MagnetWidth"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Magnet Thickness
-              <input
-                type="number"
-                name="MagnetThickness"
-                .value=${this._form["MagnetThickness"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-          </section>
-          <section>
-            <label>
-              Magnet Material
-              <select
-                name="MagnetMaterial"
-                ?disabled=${this._isLoading}
-                @change=${this.handleValueChange}>
-                <option value="Neodymium" ?selected=${this._form["MagnetMaterial"] === "Neodymium"}>
-                  Neodymium
-                </option>
-                <option value="Ferrite" ?selected=${this._form["MagnetMaterial"] === "Ferrite"}>
-                  Ferrite
-                </option>
-              </select>
-            </label>
-            <label>
-              Number Magnet
-              <input
-                type="number"
-                name="NumberMagnet"
-                .value=${this._form["NumberMagnet"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Inner Distance Between Magnets
-              <input
-                type="number"
-                name="InnerDistanceBetweenMagnets"
-                .value=${this._form["InnerDistanceBetweenMagnets"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-          </section>
-          <section>
-            <label>
-              Stator Thickness
-              <input
-                type="number"
-                name="StatorThickness"
-                .value=${this._form["StatorThickness"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Mechanical Clearance
-              <input
-                type="number"
-                name="MechanicalClearance"
-                .value=${this._form["MechanicalClearance"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-          </section>
-          <section>
-            <label>
-              Coil Type
-              <input
-                type="number"
-                name="CoilType"
-                .value=${this._form["CoilType"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Number of Coils Per Phase
-              <input
-                type="number"
-                name="NumberOfCoilsPerPhase"
-                .value=${this._form["NumberOfCoilsPerPhase"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-          </section>
-          <section>
-            <label>
-              Coil Leg Width
-              <input
-                type="number"
-                name="CoilLegWidth"
-                .value=${this._form["CoilLegWidth"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Coil Inner Width 1
-              <input
-                type="number"
-                name="CoilInnerWidth1"
-                .value=${this._form["CoilInnerWidth1"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Coil Inner Width 2
-              <input
-                type="number"
-                name="CoilInnerWidth2"
-                .value=${this._form["CoilInnerWidth2"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
+            ${this.getGroupParameters('magnafpm').map(([name, schema]) => 
+              SchemaInput({
+                name,
+                schema,
+                value: this._form[name],
+                disabled: this._isLoading,
+                onValueChange: this.handleValueChange
+              })
+            )}
           </section>
         </fieldset>
         <fieldset>
@@ -377,132 +259,15 @@ class InputsForm extends LitElement {
             ${this._isLoading ? html`<x-circular-progress size="${circularProgressSize}" class="circularProgress"></x-circular-progress>` : ""}
           </legend>
           <section>
-            <label>
-              Vertical Plane Angle
-              <input
-                type="number"
-                name="VerticalPlaneAngle"
-                .value=${this._form["VerticalPlaneAngle"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Horizontal Plane Angle
-              <input
-                type="number"
-                name="HorizontalPlaneAngle"
-                .value=${this._form["HorizontalPlaneAngle"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Offset
-              <input
-                type="number"
-                name="Offset"
-                .value=${this._form["Offset"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-          </section>
-          <section>
-            <label>
-              Bracket Length
-              <input
-                type="number"
-                name="BracketLength"
-                .value=${this._form["BracketLength"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Bracket Width
-              <input
-                type="number"
-                name="BracketWidth"
-                .value=${this._form["BracketWidth"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Bracket Thickness
-              <input
-                type="number"
-                name="BracketThickness"
-                .value=${this._form["BracketThickness"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-          </section>
-          <section>
-            <label>
-              Boom Length
-              <input
-                type="number"
-                name="BoomLength"
-                .value=${this._form["BoomLength"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Boom Pipe Radius
-              <input
-                type="number"
-                name="BoomPipeRadius"
-                .value=${this._form["BoomPipeRadius"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Boom Pipe Thickness
-              <input
-                type="number"
-                name="BoomPipeThickness"
-                .value=${this._form["BoomPipeThickness"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-          </section>
-          <section>
-            <label>
-              Vane Length
-              <input
-                type="number"
-                name="VaneLength"
-                .value=${this._form["VaneLength"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Vane Thickness
-              <input
-                type="number"
-                name="VaneThickness"
-                .value=${this._form["VaneThickness"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Vane Width
-              <input
-                type="number"
-                name="VaneWidth"
-                .value=${this._form["VaneWidth"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
+            ${this.getGroupParameters('furling').map(([name, schema]) =>
+              SchemaInput({
+                name,
+                schema,
+                value: this._form[name],
+                disabled: this._isLoading,
+                onValueChange: this.handleValueChange
+              })
+            )}
           </section>
         </fieldset>
         <fieldset>
@@ -511,118 +276,21 @@ class InputsForm extends LitElement {
             ${this._isLoading ? html`<x-circular-progress size="${circularProgressSize}" class="circularProgress"></x-circular-progress>` : ""}
           </legend>
           <section>
-            <label>
-              Hub Holes Placement
-              <input
-                type="number"
-                name="HubHolesPlacement"
-                .value=${this._form["HubHolesPlacement"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Hub Holes
-              <input
-                type="number"
-                name="HubHoles"
-                .value=${this._form["HubHoles"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Holes
-              <input
-                type="number"
-                name="Holes"
-                .value=${this._form["Holes"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-          </section>
-          <section>
-            <label>
-              Metal Length L
-              <input
-                type="number"
-                name="MetalLengthL"
-                .value=${this._form["MetalLengthL"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Metal Thickness L
-              <input
-                type="number"
-                name="MetalThicknessL"
-                .value=${this._form["MetalThicknessL"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Flat Metal Thickness
-              <input
-                type="number"
-                name="FlatMetalThickness"
-                .value=${this._form["FlatMetalThickness"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-          </section>
-          <section>
-            <label>
-              Yaw Pipe Diameter
-              <input
-                type="number"
-                name="YawPipeDiameter"
-                .value=${this._form["YawPipeDiameter"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Pipe Thickness
-              <input
-                type="number"
-                name="PipeThickness"
-                .value=${this._form["PipeThickness"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-          </section>
-          <section>
-            <label>
-              Rotor Inner Circle
-              <input
-                type="number"
-                name="RotorInnerCircle"
-                .value=${this._form["RotorInnerCircle"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
-            <label>
-              Resine Rotor Margin
-              <input
-                type="number"
-                name="ResineRotorMargin"
-                .value=${this._form["ResineRotorMargin"]}
-                ?disabled=${this._isLoading}
-                @keypress=${this.handleValueChange}
-              />
-            </label>
+            ${this.getGroupParameters('user').map(([name, schema]) =>
+              SchemaInput({
+                name,
+                schema,
+                value: this._form[name],
+                disabled: this._isLoading,
+                onValueChange: this.handleValueChange
+              })
+            )}
           </section>
         </fieldset>
         ${this._errorMessage ? html`<x-error-banner .message="${this._errorMessage}" @close=${this.handleCloseError}></x-error-banner>` : ''}
-        <x-button variant="primary" type="submit" ?disabled=${this._isLoading}>
+        <button type="submit" ?disabled=${this._isLoading}>
           ${this._isLoading ? "Loading..." : "Visualize"}
-        </x-button>
+        </button>
       </form>
     `;
   }
@@ -662,3 +330,41 @@ function createdNestedObject(object, groupGetter, valueTransformer) {
 }
 
 customElements.define("x-inputs-form", InputsForm);
+
+function SchemaInput(props) {
+  return props.schema.enum ?
+    html`
+      <label .title="${props.schema.description}">
+        ${props.schema.title}
+        <select
+          name="${props.name}"
+          ?disabled=${props.disabled}
+          @change=${props.onValueChange}>
+          ${props.schema.enum.map(value =>
+            html`
+              <option value="${value}" ?selected=${props.value === value}>
+                ${value}
+              </option>
+            `
+          )}
+        </select>
+      </label>
+    ` :
+    html`
+      <label .title="${props.schema.description}">
+        ${props.schema.title}
+        <input
+          type="number"
+          name="${props.name}"
+          min=${ifDefined(props.schema.minimum)}
+          .step=${props.schema.type === "integer" ? "1" : "any"}
+          max=${ifDefined(props.schema.maximum)}
+          .value="${props.value}"
+          ?disabled=${props.disabled}
+          @input=${props.onValueChange}
+          required
+        />
+        <p class="validationMessage"></p>
+    </label>
+  `
+}

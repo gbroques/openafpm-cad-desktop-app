@@ -20,6 +20,7 @@ class CircularProgress extends LitElement {
     .loader-path {
       fill: none;
       stroke: var(--primary-color-main);
+      transition: stroke var(--transition-duration-standard) ease-in-out;
       stroke-width: 3px;
       stroke-linecap: round;
       stroke-dasharray: 10, 10;
