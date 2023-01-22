@@ -4,6 +4,7 @@
 # and create .env file.                         #
 #                                               #
 # Supports Linux and Windows operating systems. #
+# A contribution to support MacOS is welcomed.  #
 # ===============================================
 
 # Exit on error. 
@@ -27,10 +28,18 @@ is_linux()
   [ "$(uname --kernel-name)" = "Linux" ]
 }
 
+is_macOS()
+{
+  [ "$(uname --kernel-name)" = "Darwin" ]
+}
+
 if is_linux; then
   freecad_download_link='https://github.com/FreeCAD/FreeCAD/releases/download/0.20.2/FreeCAD_0.20.2-2022-12-27-conda-Linux-x86_64-py310.AppImage'
   archive='freecad.AppImage'
-else
+elif is_macOS; then
+  echo "Error: MacOS not supported. Please contribute changes on GitHub." >&2
+  exit 1
+else # Windows
   # Use 0.20.1 instead of 0.20.2 because extracting portable 0.20.2 Windows zip errors on certain files.
   freecad_download_link='https://github.com/FreeCAD/FreeCAD/releases/download/0.20.1/FreeCAD-0.20.1-WIN-x64-portable-1.zip'
   archive='freecad.zip'
@@ -52,7 +61,10 @@ if is_linux; then
   else
     echo 'FreeCAD AppImage already extracted.'
   fi
-else
+elif is_macOS; then
+  echo "Error: MacOS not supported. Please contribute changes on GitHub." >&2
+  exit 1
+else # Windows
   extracted_directory='FreeCAD-portable'
   if [ ! -d "$extracted_directory" ]; then
     echo 'Extracting FreeCAD archive.'
@@ -98,7 +110,10 @@ if [ ! -f '.env' ]; then
   if is_linux; then
     python_path=$(get_path python)
     freecad_lib_directory=$(get_path FreeCAD.so | xargs -0 dirname)
-  else
+  elif is_macOS; then
+    echo "Error: MacOS not supported. Please contribute changes on GitHub." >&2
+    exit 1
+  else # Windows
     validate_command_exists cygpath
     # cygpath is needed to convert posix paths to windows paths for .env file
     # for example /c/path/to/python.exe -> C:\path\to\python.exe

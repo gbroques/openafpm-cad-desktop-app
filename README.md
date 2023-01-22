@@ -8,11 +8,11 @@ A desktop application for quickly testing the integration between [openafpm-cad-
 
        npm install
 
-3. Install [FreeCAD](https://github.com/FreeCAD/FreeCAD/releases/tag/0.20), [openafpm-cad-core](https://github.com/gbroques/openafpm-cad-core) module, and create `.env` file.
+3. Install [FreeCAD](https://github.com/FreeCAD/FreeCAD/releases/tag/0.20), [openafpm-cad-core](https://github.com/gbroques/openafpm-cad-core) module (plus dependencies), and create `.env` file.
 
        ./install.sh
 
-    Currently the `install.sh` script only supports Linux and Windows (via [Git for Windows](https://gitforwindows.org/)).
+    Currently the [`install.sh`](./install.sh) script only supports Linux and Windows (via [Git for Windows](https://gitforwindows.org/)). A contribution to support MacOS is welcomed.
 
 ## How to Run
 
