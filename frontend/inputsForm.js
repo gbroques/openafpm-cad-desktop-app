@@ -170,7 +170,8 @@ class InputsForm extends LitElement {
       valueTransformer);
     const body = JSON.stringify(parameterByGroup);
     this._isLoading = true;
-    const promise = this.fetch(event.target.action, {
+    this.createArchive(body);
+    const visualizePromise = this.fetch(event.target.action, {
       body,
       headers: {
         'Content-Type': 'application/json',
@@ -183,8 +184,26 @@ class InputsForm extends LitElement {
         bubbles: true,
         composed: true
       }));
+    });
+    this.setPromiseToState(visualizePromise);
+  }
+  createArchive(body) {
+    this.fetch('/archive', {
+      body,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      method: 'POST'
     })
-    this.setPromiseToState(promise);
+    .then(() => {
+      this.dispatchEvent(new Event('archive-created', {
+        bubbles: true,
+        composed: true
+      }));
+    })
+    .catch(error => {
+      this._errorMessage = error.message;
+    });
   }
   setPromiseToState(promise) {
     promise

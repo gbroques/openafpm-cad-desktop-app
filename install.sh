@@ -52,9 +52,9 @@ else
   echo 'FreeCAD already downloaded.'
 fi
 
+extracted_directory='squashfs-root'
 if is_linux; then
   chmod a+x $archive
-  extracted_directory='squashfs-root'
   if [ ! -d "$extracted_directory" ]; then
     echo 'Extracting FreeCAD AppImage.'
     ./$archive --appimage-extract
@@ -65,7 +65,6 @@ elif is_macOS; then
   echo "Error: MacOS not supported. Please contribute changes on GitHub." >&2
   exit 1
 else # Windows
-  extracted_directory='FreeCAD-portable'
   if [ ! -d "$extracted_directory" ]; then
     echo 'Extracting FreeCAD archive.'
     validate_command_exists unzip
@@ -99,8 +98,7 @@ install_gbroques_module freecad-to-obj
 
 get_path()
 {
-  validate_command_exists realpath
-  realpath `find $extracted_directory -type f -name "$1"`
+  find $extracted_directory -type f -name "$1"
 }
 
 # Create .env file
@@ -117,7 +115,7 @@ if [ ! -f '.env' ]; then
     validate_command_exists cygpath
     # cygpath is needed to convert posix paths to windows paths for .env file
     # for example /c/path/to/python.exe -> C:\path\to\python.exe
-    python_path=$(cygpath -w `realpath "$extracted_directory/bin/python.exe"`)
+    python_path=$(cygpath -w "$extracted_directory/bin/python.exe")
     freecad_lib_directory=$(cygpath -w $(get_path FreeCADApp.dll | xargs -0 dirname))
   fi
   echo "PYTHON=$python_path" > .env

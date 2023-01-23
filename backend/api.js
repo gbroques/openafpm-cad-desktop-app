@@ -2,15 +2,22 @@ const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const express = require('express');
-require('dotenv').config();
+const os = require('os');
+const rootPath = path.join(__dirname, '..');
+
+require('dotenv').config({ path: path.join(rootPath, '.env') });
 
 const api = express();
 api.use(express.json());
 
-const rootPath = path.join(__dirname, '..');
+const dataDir = path.join(getApplicationDataDirectory(), 'openafpm-cad-desktop-app');
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+const pythonPath = path.join(rootPath, process.env.PYTHON);
 const frontendPath = path.join(rootPath, 'frontend');
 api.use(express.static(frontendPath));
-api.use('/web_modules', express.static(path.join(rootPath, 'node_modules')))
+api.use('/web_modules', express.static(path.join(rootPath, 'node_modules')));
+api.use('/data', express.static(dataDir));
 
 api.get('/defaultparameters', (req, res) => {
   getDefaultParameters().then(defaultParameters => {
@@ -31,19 +38,26 @@ api.get('/parametersschema', (req, res) => {
 });
 
 api.post('/visualize', (req, res) => {
-  const json = JSON.stringify(req.body, null, 4);
-  const parametersFilepath = path.join(__dirname, 'parameters.json');
-  fs.writeFileSync(parametersFilepath, json);
-
+  const parameters = "'" + JSON.stringify(req.body) + "'";
   const objFilename = 'wind-turbine.obj';
-
-  const furlTransformsFilename = 'furl-transforms.json';
-  const furlTransformsFilepath = path.join(frontendPath, furlTransformsFilename);
-  
-  visualize(frontendPath, objFilename, furlTransformsFilename).then((stdout) => {
+  const objTextPromise = visualize(dataDir, objFilename, parameters);
+  const furlTransformsPromise = getFurlTransforms(parameters);
+  const promise = Promise.all([objTextPromise, furlTransformsPromise]);
+  promise.then(([stdout, furlTransformsJson]) => {
     console.log(stdout);
-    const furlTransforms = JSON.parse(fs.readFileSync(furlTransformsFilepath))
-    res.status(200).send({ objUrl: objFilename, furlTransforms });
+    const furlTransforms = JSON.parse(furlTransformsJson);
+    res.status(200).send({ objUrl: `data/${objFilename}`, furlTransforms });
+  }).catch(err => {
+    console.error(err);
+    res.status(500).send({ error: err.toString() });
+  });
+});
+
+api.post('/archive', (req, res) => {
+  const parameters = "'" + JSON.stringify(req.body) + "'";
+  createArchive(dataDir, parameters).then((message) => {
+    console.log(message);
+    res.status(200).send({ message });
   }).catch(err => {
     console.error(err);
     res.status(500).send({ error: err.toString() });
@@ -52,6 +66,14 @@ api.post('/visualize', (req, res) => {
 
 function visualize(...args) {
   return execPythonScript('visualize', ...args);
+}
+
+function getFurlTransforms(...args) {
+  return execPythonScript('get_furl_transforms', ...args);
+}
+
+function createArchive(...args) {
+  return execPythonScript('create_archive', ...args);
 }
 
 function getDefaultParameters() {
@@ -64,9 +86,9 @@ function getParametersSchema() {
 
 function execPythonScript(scriptName, ...args) {
   return new Promise((resolve, reject) => {
-    const options = { cwd: __dirname };
-    const command = `${process.env.PYTHON} ${scriptName}.py ${args.join(' ')}`;
-    exec(command, options, (error, stdout, stderr) => {
+    const scriptPath = path.join(__dirname, `${scriptName}.py`);
+    const command = `${pythonPath} ${scriptPath} ${args.join(' ')}`;
+    exec(command, (error, stdout, stderr) => {
       if (error) {
         if (stdout) {
           console.log(stdout);
@@ -82,6 +104,18 @@ function execPythonScript(scriptName, ...args) {
       }
     })
   });
+}
+
+function getApplicationDataDirectory() {
+  switch(process.platform) {
+    case 'darwin':
+      // https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/MacOSXDirectories/MacOSXDirectories.html
+      return path.join(os.homedir(), 'Library', 'Application Support');
+    case 'win32':
+      return process.env.APPDATA;
+    default:
+      return path.join(os.homedir(), '.local', 'share');
+  }
 }
 
 module.exports = api;

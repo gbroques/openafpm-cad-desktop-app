@@ -7,7 +7,8 @@ class CircularProgress extends LitElement {
   static properties = {
     style: { type: String },
     class: { type: String },
-    size: { type: String }
+    size: { type: String },
+    color: { type: String }
   };
   constructor() {
     super();
@@ -19,7 +20,7 @@ class CircularProgress extends LitElement {
     }
     .loader-path {
       fill: none;
-      stroke: var(--primary-color-main);
+      stroke: currentColor;
       transition: stroke var(--transition-duration-standard) ease-in-out;
       stroke-width: 3px;
       stroke-linecap: round;
@@ -50,8 +51,9 @@ class CircularProgress extends LitElement {
     }
   `;
   render() {
+    const color = this.color || 'var(--primary-color-main)';
     return html`
-      <div class="${this.class}" style="width: ${this.size}; height: ${this.size}; display: inline-block; ${this.style}">
+      <div class="${this.class}" style="width: ${this.size}; height: ${this.size}; color: ${color}; display: inline-block; ${this.style}">
         <svg class="circular-loader" viewBox="25 25 50 50">
           <circle class="loader-path" cx="50" cy="50" r="20" fill="none"></circle>
         </svg>

@@ -6,8 +6,10 @@ FREECAD_LIB environment variable must be set.
 """
 import os
 import sys
-
-sys.path.append(os.environ['FREECAD_LIB'])
+from pathlib import Path
+root_path = Path(__file__).parent.parent
+freecad_lib = str(root_path.joinpath(os.environ['FREECAD_LIB']).resolve())
+sys.path.append(freecad_lib)
 import json
 
 import FreeCAD

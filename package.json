@@ -4,7 +4,9 @@
   "description": "Desktop application to visualize wind turbine designs.",
   "main": "backend/electron.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --prepackaged dist/linux-unpacked"
   },
   "keywords": [],
   "author": "G Roques",
@@ -16,6 +18,20 @@
     "openafpm-cad-visualization": "git+https://github.com/gbroques/openafpm-cad-visualization.git#4e2661340771bd4b9ee3d6c826f249cfe44b1181"
   },
   "devDependencies": {
-    "electron": "^22.0.0"
+    "electron": "^22.0.0",
+    "electron-builder": "^23.6.0"
+  },
+  "build": {
+    "appId": "openafpm-cad-desktop-app",
+    "asar": false,
+    "files": [
+      "**/*",
+      "!freecad.AppImage",
+      "!squashfs-root"
+    ],
+    "afterPack": "./afterPack.js",
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }

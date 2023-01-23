@@ -2,6 +2,8 @@ const { app: electronApp, BrowserWindow, nativeTheme } = require('electron');
 const path = require('path');
 const api = require('./api');
 
+process.noAsar = true;
+
 nativeTheme.themeSource = 'light';
 const server = api.listen();
 

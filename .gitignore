@@ -1,11 +1,6 @@
 node_modules/
-backend/parameters.json
-frontend/furl-transforms.json
 .vscode/
-*.obj
-*.FCStd*
 .env
-*.zip
-*.AppImage
-squashfs-root
-FreeCAD-portable
+freecad.AppImage
+squashfs-root/
+dist/
