@@ -38,7 +38,7 @@ api.get('/parametersschema', (req, res) => {
 });
 
 api.post('/visualize', (req, res) => {
-  const parameters = "'" + JSON.stringify(req.body) + "'";
+  const parameters = JSON.stringify(req.body).replaceAll('"', '\\"');
   const objFilename = 'wind-turbine.obj';
   const objTextPromise = visualize(dataDir, objFilename, parameters);
   const furlTransformsPromise = getFurlTransforms(parameters);
@@ -54,7 +54,7 @@ api.post('/visualize', (req, res) => {
 });
 
 api.post('/archive', (req, res) => {
-  const parameters = "'" + JSON.stringify(req.body) + "'";
+  const parameters = JSON.stringify(req.body).replaceAll('"', '\\"');
   createArchive(dataDir, parameters).then((message) => {
     console.log(message);
     res.status(200).send({ message });
