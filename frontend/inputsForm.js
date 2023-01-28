@@ -27,6 +27,7 @@ class InputsForm extends LitElement {
     this._form = {};
     this._isLoading = true;
     this._errorMessage = '';
+    this._abortController = null;
   }
   static styles = css`
     :host {
@@ -133,6 +134,9 @@ class InputsForm extends LitElement {
       margin-bottom: 0;
       margin-top: calc(var(--spacing) * 1);
     }
+    .positionAbsolute {
+      position: absolute;
+    }
   `;
   handleSelect(event) {
     const selectedVariant = event.target.value; 
@@ -157,6 +161,8 @@ class InputsForm extends LitElement {
   }
   handleSubmit(event) {
     event.preventDefault();
+    if (this._isLoading) this._abortController.abort();
+    this._abortController = new AbortController();
     const formData = new FormData(event.target);
     const valueByKey = {};
     formData.forEach((value, key) => {
@@ -176,7 +182,8 @@ class InputsForm extends LitElement {
       headers: {
         'Content-Type': 'application/json',
       },
-      method: event.target.method
+      method: event.target.method,
+      signal: this._abortController.signal
     })
     .then(data => {
       this.dispatchEvent(new CustomEvent('visualize', {
@@ -193,7 +200,8 @@ class InputsForm extends LitElement {
       headers: {
         'Content-Type': 'application/json',
       },
-      method: 'POST'
+      method: 'POST',
+      signal: this._abortController.signal
     })
     .then(() => {
       this.dispatchEvent(new Event('archive-created', {
@@ -202,16 +210,21 @@ class InputsForm extends LitElement {
       }));
     })
     .catch(error => {
-      this._errorMessage = error.message;
+      if (error.name !== 'AbortError') {
+        this._errorMessage = error.message;
+      }
     });
   }
   setPromiseToState(promise) {
     promise
-    .catch(error => {
-      this._errorMessage = error.message;
-    })
-    .finally(() => {
+    .then(() => {
       this._isLoading = false;
+    })
+    .catch(error => {
+      if (error.name !== 'AbortError') {
+        this._errorMessage = error.message;
+        this._isLoading = false;
+      }
     });
   }
   fetch(...args) {
@@ -239,6 +252,7 @@ class InputsForm extends LitElement {
   }
   render() {
     const circularProgressSize = "28px";
+    const isFormLoading = Object.keys(this._parametersSchema).length === 0;
     return html`
       <form action="visualize" method="post" @submit=${this.handleSubmit}>
         <label>
@@ -246,7 +260,7 @@ class InputsForm extends LitElement {
           <select
             name="Variant"
             @change=${this.handleSelect}
-            ?disabled=${this._isLoading}
+            ?disabled=${isFormLoading}
             class="variantSelect"
           >
             <option value="T Shape" ?selected=${this._variant === "T Shape"}>T Shape</option>
@@ -266,7 +280,6 @@ class InputsForm extends LitElement {
                 name,
                 schema,
                 value: this._form[name],
-                disabled: this._isLoading,
                 onValueChange: this.handleValueChange
               })
             )}
@@ -283,7 +296,6 @@ class InputsForm extends LitElement {
                 name,
                 schema,
                 value: this._form[name],
-                disabled: this._isLoading,
                 onValueChange: this.handleValueChange
               })
             )}
@@ -300,15 +312,15 @@ class InputsForm extends LitElement {
                 name,
                 schema,
                 value: this._form[name],
-                disabled: this._isLoading,
                 onValueChange: this.handleValueChange
               })
             )}
           </section>
         </fieldset>
         ${this._errorMessage ? html`<x-error-banner .message="${this._errorMessage}" @close=${this.handleCloseError}></x-error-banner>` : ''}
-        <button type="submit" ?disabled=${this._isLoading}>
-          ${this._isLoading ? "Loading..." : "Visualize"}
+        <button type="submit" ?disabled=${isFormLoading} style="position: relative">
+          ${isFormLoading ? "Loading..." : "Visualize"}
+          ${!isFormLoading && this._isLoading ? html`<x-circular-progress size="var(--h6)" class="positionAbsolute circularProgress" color="white"></x-circular-progress>` : ""}
         </button>
       </form>
     `;
