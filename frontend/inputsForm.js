@@ -113,6 +113,7 @@ class InputsForm extends LitElement {
       font-weight: bold;
       border-radius: 4px;
       font-size: var(--h6);
+      position: relative;
     }
     button[type="submit"]:hover {
       background-color: var(--primary-color-dark);
@@ -122,6 +123,10 @@ class InputsForm extends LitElement {
       cursor: default;
       background-color: var(--background-disabled);
       color: var(--text-disabled);
+    }
+    button[type="submit"]:active {
+      box-shadow: none;
+      top: 1px;
     }
     .circularProgress {
       margin-left: calc(var(--spacing) * 2);
@@ -134,7 +139,8 @@ class InputsForm extends LitElement {
       margin-bottom: 0;
       margin-top: calc(var(--spacing) * 1);
     }
-    .positionAbsolute {
+    .submitButtonCircularProgress {
+      margin-left: calc(var(--spacing) * 1.5);
       position: absolute;
     }
   `;
@@ -148,8 +154,8 @@ class InputsForm extends LitElement {
     this._errorMessage = '';
   }
   firstUpdated() {
-    const defaultParametersPromise = this.fetch('/defaultparameters')
-    const parametersSchemaPromise = this.fetch('/parametersschema');
+    const defaultParametersPromise = this.fetch('/api/defaultparameters');
+    const parametersSchemaPromise = this.fetch('/api/parametersschema');
 
     const promise = Promise.all([defaultParametersPromise, parametersSchemaPromise]);
     promise.then(([parametersByVariant, parametersSchema]) => {
@@ -176,7 +182,7 @@ class InputsForm extends LitElement {
       valueTransformer);
     const body = JSON.stringify(parameterByGroup);
     this._isLoading = true;
-    this.createArchive(body);
+    const createArchive = () => this.createArchive(body);
     const visualizePromise = this.fetch(event.target.action, {
       body,
       headers: {
@@ -184,35 +190,23 @@ class InputsForm extends LitElement {
       },
       method: event.target.method,
       signal: this._abortController.signal
-    })
-    .then(data => {
-      this.dispatchEvent(new CustomEvent('visualize', {
-        detail: data,
-        bubbles: true,
-        composed: true
-      }));
     });
+    const loadObjText = () => visualizePromise.then(({objText}) => objText);
+    const furlTransformsPromise = visualizePromise.then(({furlTransforms}) => furlTransforms);
+    this.dispatchEvent(new CustomEvent('visualize', {
+      detail: { visualizePromise, createArchive },
+      bubbles: true,
+      composed: true
+    }));
     this.setPromiseToState(visualizePromise);
   }
   createArchive(body) {
-    this.fetch('/archive', {
+    return fetch('/api/archive', {
       body,
       headers: {
         'Content-Type': 'application/json',
       },
-      method: 'POST',
-      signal: this._abortController.signal
-    })
-    .then(() => {
-      this.dispatchEvent(new Event('archive-created', {
-        bubbles: true,
-        composed: true
-      }));
-    })
-    .catch(error => {
-      if (error.name !== 'AbortError') {
-        this._errorMessage = error.message;
-      }
+      method: 'POST'
     });
   }
   setPromiseToState(promise) {
@@ -229,12 +223,12 @@ class InputsForm extends LitElement {
   }
   fetch(...args) {
     return fetch(...args)
-      .then(r => r.json())
-      .then(r => {
-        if (r.error) {
-          throw new Error(r.error);
+      .then(response => response.json())
+      .then(response => {
+        if (response.error) {
+          throw new Error(response.error);
         }
-        return r;
+        return response;
       });
   }
   handleValueChange(event) {
@@ -254,7 +248,7 @@ class InputsForm extends LitElement {
     const circularProgressSize = "28px";
     const isFormLoading = Object.keys(this._parametersSchema).length === 0;
     return html`
-      <form action="visualize" method="post" @submit=${this.handleSubmit}>
+      <form action="/api/visualize" method="post" @submit=${this.handleSubmit}>
         <label>
           Preset
           <select
@@ -320,7 +314,7 @@ class InputsForm extends LitElement {
         ${this._errorMessage ? html`<x-error-banner .message="${this._errorMessage}" @close=${this.handleCloseError}></x-error-banner>` : ''}
         <button type="submit" ?disabled=${isFormLoading} style="position: relative">
           ${isFormLoading ? "Loading..." : "Visualize"}
-          ${!isFormLoading && this._isLoading ? html`<x-circular-progress size="var(--h6)" class="positionAbsolute circularProgress" color="white"></x-circular-progress>` : ""}
+          ${!isFormLoading && this._isLoading ? html`<x-circular-progress size="var(--h6)" class="submitButtonCircularProgress" color="var(--background-default)"></x-circular-progress>` : ""}
         </button>
       </form>
     `;

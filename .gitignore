@@ -4,3 +4,4 @@ node_modules/
 freecad.AppImage
 squashfs-root/
 dist/
+__pycache__/

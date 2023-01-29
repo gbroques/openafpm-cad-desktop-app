@@ -32,6 +32,13 @@ class Button extends LitElement {
     .primary:hover {
       background-color: var(--primary-color-dark);
     }
+    .error {
+      background-color: var(--error-color-main);
+      color: white;
+    }
+    .error:hover {
+      background-color: var(--error-color-dark);
+    }
     .button:disabled {
       box-shadow: none;
       cursor: default;
@@ -39,18 +46,9 @@ class Button extends LitElement {
       color: var(--text-disabled);
     }
   `;
-  handleClick() {
-    if (this.type === "submit") {
-      const closestForm = this.closest("form");
-      if (closestForm) {
-        closestForm.dispatchEvent(new Event("submit"));
-      }
-    }
-  }
   render() {
     return html`
       <button
-        @click=${this.handleClick}
         part="button"
         class=${classNames("button", this.variant)}
         ?disabled=${this.disabled}

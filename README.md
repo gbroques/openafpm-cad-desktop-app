@@ -18,18 +18,6 @@ A desktop application for quickly testing the integration between [openafpm-cad-
 
     npm start
 
-## Application Data
-
-Application data is stored in the user's application data directory depending upon the operating system.
-
-| Operating System | Directory                                                |
-| ---------------- | -------------------------------------------------------- |
-| Linux            | `~/.local/share/openafpm-cad-desktop-app`                |
-| MacOS            | `~/Library/Application Support/openafpm-cad-desktop-app` |
-| Windows          | `%APPDATA%\openafpm-cad-desktop-app`                     |
-
-Currently this directory consists of `wind-turbine.obj` and `WindTurbine.zip` files.
-
 ## Packaging & Distributing
 
 [electron-builder](https://www.electron.build/) is used to package and distribute the application.

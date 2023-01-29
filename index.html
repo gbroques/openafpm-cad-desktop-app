@@ -23,6 +23,8 @@
       html[data-theme='light'] {
         --primary-color-main: #43A047; /* Green 600 - https://www.materialui.co/colors */
         --primary-color-dark: #388E3C; /* Green 700 - https://www.materialui.co/colors */
+        --error-color-main: #E53935; /* Red 600 - https://www.materialui.co/colors */
+        --error-color-dark: #D32F2F; /* Red 700 - https://www.materialui.co/colors */
         --validation-color-main: #D32F2F; /* Red 700 - https://www.materialui.co/colors */
         --background-default: #FFFFFF;
         --background-navigation: #FFFFFF;
@@ -35,6 +37,8 @@
       html[data-theme='dark'] {
         --primary-color-main: #A5D6A7; /* Green 200 - https://www.materialui.co/colors */
         --primary-color-dark: #81C784; /* Green 300 - https://www.materialui.co/colors */
+        --error-color-main: #E53935; /* Red 600 - https://www.materialui.co/colors */
+        --error-color-dark: #D32F2F; /* Red 700 - https://www.materialui.co/colors */
         --validation-color-main: #FF5252; /* Red A200 - https://www.materialui.co/colors */
         --background-default: #212121;
         --background-navigation: #303030;
@@ -107,17 +111,17 @@
   <script type="importmap">
     {
       "imports": {
-        "lit": "./web_modules/lit/index.js",
-        "lit-html": "./web_modules/lit-html/lit-html.js",
-        "lit-html/": "./web_modules/lit-html/",
-        "lit-element/": "./web_modules/lit-element/",
-        "@lit/reactive-element": "./web_modules/@lit/reactive-element/reactive-element.js",
-        "openafpm-cad-visualization": "./web_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js"
+        "lit": "./node_modules/lit/index.js",
+        "lit-html": "./node_modules/lit-html/lit-html.js",
+        "lit-html/": "./node_modules/lit-html/",
+        "lit-element/": "./node_modules/lit-element/",
+        "@lit/reactive-element": "./node_modules/@lit/reactive-element/reactive-element.js",
+        "openafpm-cad-visualization": "./node_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js"
       }
     }
   </script>
-  <script type="module" src="themeToggle.js"></script>
-  <script type="module" src="app.js"></script>
+  <script type="module" src="./frontend/themeToggle.js"></script>
+  <script type="module" src="./frontend/app.js"></script>
   <script>
     // Setup theme toggle.
     const themeToggle = document.querySelector("x-theme-toggle");
@@ -141,7 +145,7 @@
     window.addEventListener("load", handleLoad);
     function handleLoad() {
       document.getElementById("loading-spinner").remove();
-      import("./web_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js")
+      import("./node_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js")
         .then(setup);
     }
     function setup({default: OpenAfpmCadVisualization}) {
@@ -156,26 +160,32 @@
         const offsetHeight = headerHeight + tabsHeight;
         return window.innerHeight - offsetHeight;
       }
-      const openAfpmCadVisualization = new OpenAfpmCadVisualization({
-        rootDomElement: visualizationRoot,
-        width: calculateWidth(),
-        height: calculateHeight()
-      });
+
+      let cleanUp = null;
+      let openAfpmCadVisualization = null;
       const handleResize = () => {
         const width = calculateWidth();
         const height = calculateHeight();
         openAfpmCadVisualization.resize(width, height);
       };
-      let cleanUp = null;
-      app.addEventListener("visualize", (e) => {
+      app.addEventListener("visualize", (event) => {
         if (cleanUp) {
           cleanUp();
         } else {
+          // Only perform once.
+          openAfpmCadVisualization = new OpenAfpmCadVisualization({
+            rootDomElement: visualizationRoot,
+            width: calculateWidth(),
+            height: calculateHeight()
+          });
           window.addEventListener("resize", handleResize, false);
         }
         visualizationRoot.innerHTML = "";
-        const {objUrl, furlTransforms} = e.detail;
-        openAfpmCadVisualization.visualize(objUrl, "WindTurbine", {furl: furlTransforms});
+        const { visualizePromise} = event.detail;
+        const loadObjText = () => visualizePromise.then(({objText}) => objText);
+        const furlTransformsPromise = visualizePromise.then(({furlTransforms}) => furlTransforms);
+        const transformsByNamePromise = furlTransformsPromise.then(furlTransforms => ({furl: furlTransforms}));
+        openAfpmCadVisualization.visualize(loadObjText, "WindTurbine", transformsByNamePromise);
         handleResize();
         const handleMouseMove = (event) => openAfpmCadVisualization.handleMouseMove(event);
         window.addEventListener("mousemove", handleMouseMove, false);

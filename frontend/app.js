@@ -16,8 +16,8 @@ const Tab = {
 export default class App extends LitElement {
   static properties = {
     _tab: { type: String, state: true },
-    _hasArchive: { type: Boolean, state: true },
-    _isArchiveLoading: { type: Boolean, state: true }
+    _isArchiveLoading: { type: Boolean, state: true },
+    _errorMessage: { type: String, state: true }
   };
   static styles = css`
     :host {
@@ -27,19 +27,50 @@ export default class App extends LitElement {
   constructor() {
     super();
     this._tab = Tab.Inputs;
-    this._hasArchive = false;
     this._isArchiveLoading = false;
+    this._errorMessage = '';
+    this._createArchive = null;
   }
   handleSelect(event) {
     this._tab = event.detail.selectedValue;
   }
-  handleVisualize() {
-    this._tab = Tab.Visualize;
-    this._isArchiveLoading = true;
+  handleVisualize(event) {
+    const { visualizePromise, createArchive } = event.detail;
+    visualizePromise.then(() => {
+      this._tab = Tab.Visualize;
+    });
+    this._createArchive = createArchive;
   }
-  handleArchiveCreated() {
-    this._hasArchive = true;
-    this._isArchiveLoading = false;
+  handleDownloadButtonClick(event) {
+    if (this._isArchiveLoading) return;
+    this._isArchiveLoading = true;
+    this._createArchive()
+      .then(response => {
+        if (!response.ok) {
+          return response.json();
+        }
+        return response;
+      })
+      .then(response => {
+        if (response.error) {
+          throw new Error(response.error);
+        }
+        return response;
+      })
+      .then(response => response.blob())
+      .then(blob => {
+        this._errorMessage = '';
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'WindTurbine.zip';
+        link.click();
+      })
+      .catch(error => {
+        this._errorMessage = error.message;
+      })
+      .finally(() => {
+        this._isArchiveLoading = false;
+      });
   }
   render() {
     return html`
@@ -53,15 +84,17 @@ export default class App extends LitElement {
       </x-tabs>
       <x-tab-panel ?visible=${this._tab === Tab.Inputs}>
         <x-container>
-          <x-inputs-form @visualize=${this.handleVisualize} @archive-created=${this.handleArchiveCreated}>
+          <x-inputs-form @visualize=${this.handleVisualize}>
         </x-inputs-form>
         </x-container>
       </x-tab-panel>
       <x-tab-panel ?visible=${this._tab === Tab.Visualize}>
         <slot></slot>
         <x-download-button
-          ?disabled=${!this._hasArchive || this._isArchiveLoading}
-          ?loading=${this._isArchiveLoading}>
+          ?disabled=${this._createArchive === null || this._isArchiveLoading}
+          ?loading=${this._isArchiveLoading}
+          .errorMessage=${this._errorMessage}
+          @click=${this.handleDownloadButtonClick}>
         </x-download-button>
       </x-tab-panel>
     `;

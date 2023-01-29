@@ -7,7 +7,8 @@ import "./circularProgress.js";
 class DownloadButton extends LitElement {
   static properties = {
     disabled: { type: Boolean },
-    loading: { type: Boolean }
+    loading: { type: Boolean },
+    errorMessage: { type: String }
   };
   static styles = css`
     :host {
@@ -27,31 +28,29 @@ class DownloadButton extends LitElement {
       fill: currentColor;
     }
   `;
-  handleSubmit(event) {
-    event.target.submit();
-  }
   render() {
+    const variant = this.errorMessage ? 'error' : 'primary';
     return html`
-      <form method="get" action="data/WindTurbine.zip" @submit=${this.handleSubmit}>
-        <x-button
-          variant="primary"
-          ?disabled=${this.disabled}
-          type="submit"
-          .title="${this.loading ? "Loading..." : "Download"}">
-          ${this.loading ?
-            html`
-              <x-circular-progress class="svg" size="24px" color=${this.disabled ? "currentColor" : nothing}>
-              </x-circular-progress>
-            ` :
-            html`
-              <svg class="svg" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path>
-              </svg>
-            `
-          }
-        </x-button>
-      </form>
-    `;
+      <x-button
+        .variant=${variant}
+        ?disabled=${this.disabled}
+        .title="${this.loading ? "Loading..." : this.errorMessage ? this.errorMessage : "Download"}">
+        ${this.loading ?
+          html`
+            <x-circular-progress
+              class="svg"
+              size="24px"
+              color=${this.disabled ? "currentColor" : nothing}>
+            </x-circular-progress>
+          ` :
+          html`
+            <svg class="svg" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path>
+            </svg>
+          `
+        }
+      </x-button>
+  `;
   }
 }
 

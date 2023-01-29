@@ -12,7 +12,7 @@ class ErrorBanner extends LitElement {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background-color: #E53935; /* Red 600 - https://www.materialui.co/colors */
+      background-color: var(--error-color-main);
       color: white;
       box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.3);
       border-radius: 4px;
@@ -23,7 +23,7 @@ class ErrorBanner extends LitElement {
       height: 24px;
       min-width: 24px;
       margin-right: calc(var(--spacing) * 1);
-      fill: #ffffff;
+      fill: white;
     }
   `;
   handleClose() {
