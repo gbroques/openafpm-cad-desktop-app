@@ -169,18 +169,8 @@ class InputsForm extends LitElement {
     event.preventDefault();
     if (this._isLoading) this._abortController.abort();
     this._abortController = new AbortController();
-    const formData = new FormData(event.target);
-    const valueByKey = {};
-    formData.forEach((value, key) => {
-      valueByKey[key] = value;
-    });
     const parameters = this._parametersByVariant[this._variant];
-    const groupByKey = flattenToGroupByKey(parameters);
-    const valueTransformer = value => isNaN(value) ? value : parseFloat(value);
-    const parameterByGroup = createdNestedObject(valueByKey,
-      key => groupByKey[key],
-      valueTransformer);
-    const body = JSON.stringify(parameterByGroup);
+    const body = buildRequestBody(event.target, parameters);
     this._isLoading = true;
     const createArchive = () => this.createArchive(body);
     const visualizePromise = this.fetch(event.target.action, {
@@ -191,8 +181,6 @@ class InputsForm extends LitElement {
       method: event.target.method,
       signal: this._abortController.signal
     });
-    const loadObjText = () => visualizePromise.then(({objText}) => objText);
-    const furlTransformsPromise = visualizePromise.then(({furlTransforms}) => furlTransforms);
     this.dispatchEvent(new CustomEvent('visualize', {
       detail: { visualizePromise, createArchive },
       bubbles: true,
@@ -354,8 +342,6 @@ function createdNestedObject(object, groupGetter, valueTransformer) {
   }, {});
 }
 
-customElements.define("x-inputs-form", InputsForm);
-
 function SchemaInput(props) {
   return props.schema.enum ?
     html`
@@ -393,3 +379,19 @@ function SchemaInput(props) {
     </label>
   `
 }
+
+function buildRequestBody(form, parameters) {
+  const formData = new FormData(form);
+  const valueByKey = {};
+  formData.forEach((value, key) => {
+    valueByKey[key] = value;
+  });
+  const groupByKey = flattenToGroupByKey(parameters);
+  const valueTransformer = value => isNaN(value) ? value : parseFloat(value);
+  const parameterByGroup = createdNestedObject(valueByKey,
+    key => groupByKey[key],
+    valueTransformer);
+  return JSON.stringify(parameterByGroup);
+}
+
+customElements.define("x-inputs-form", InputsForm);
