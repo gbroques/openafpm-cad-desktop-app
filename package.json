@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder --prepackaged dist/linux-unpacked"
+    "dist": "electron-builder --prepackaged $(find dist -type d -name '*-unpacked')"
   },
   "keywords": [],
   "author": "G Roques",
@@ -28,11 +28,15 @@
     "files": [
       "**/*",
       "!freecad.AppImage",
-      "!squashfs-root"
+      "!squashfs-root",
+      "!freecad.zip"
     ],
     "afterPack": "./afterPack.js",
     "linux": {
       "target": "AppImage"
+    },
+    "win": {
+      "target": "portable"
     }
   }
 }
