@@ -13,6 +13,7 @@ Where port defaults to 8000.
 import json
 import os
 import sys
+import traceback
 from collections import defaultdict
 from http import HTTPStatus
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -76,6 +77,7 @@ def create_request_handler(operations_by_method_and_path: Dict[str, Callable], d
                 except Exception as exception:
                     response = {'error': str(exception)}
                     http_status = HTTPStatus.INTERNAL_SERVER_ERROR
+                    print(traceback.format_exc())
                 self.send_response(http_status)
                 self.write(response)
             elif self.command == 'GET':
