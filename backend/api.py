@@ -18,9 +18,9 @@ from collections import defaultdict
 from http import HTTPStatus
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from inspect import signature
-from multiprocessing import Process, Queue
+from multiprocessing import Pool
 from pathlib import Path
-from typing import Callable, Dict, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 # Add FreeCAD lib directory to sys.path for importing FreeCAD.
 # ------------------------------------------------------------------------
@@ -151,40 +151,35 @@ def handle_get_parameters_schema() -> dict:
     return get_parameters_schema()
 
 
-def load_furl_transforms_from_parameters(parameters: dict, queue: Queue) -> None:
+def load_furl_transforms_from_parameters(parameters: dict) -> List[dict]:
     magnafpm_parameters = parameters['magnafpm']
     user_parameters = parameters['user']
     furling_parameters = parameters['furling']
-    queue.put(load_furl_transforms(magnafpm_parameters,
-                                   user_parameters,
-                                   furling_parameters))
+    return load_furl_transforms(magnafpm_parameters,
+                                user_parameters,
+                                furling_parameters)
 
 
-def visualize_wind_turbine_from_parameters(parameters: dict, queue: Queue) -> None:
-    magnafpm_parameters = parameters['magnafpm']
+def visualize_wind_turbine_from_parameters(parameters: dict) -> str:
+    magnafpm_parameters = parameters['magnafpmMM']
     user_parameters = parameters['user']
     furling_parameters = parameters['furling']
-    queue.put(assembly_to_obj(
+    return assembly_to_obj(
         Assembly.WIND_TURBINE,
         magnafpm_parameters,
         user_parameters,
-        furling_parameters))
+        furling_parameters)
 
 
 @api.post('/api/visualize')
 def visualize(parameters: dict) -> dict:
-    furl_transforms_queue = Queue()
-    furl_transforms_process = Process(
-        target=load_furl_transforms_from_parameters, args=(parameters, furl_transforms_queue))
-    visualize_queue = Queue()
-    visualize_process = Process(
-        target=visualize_wind_turbine_from_parameters, args=(parameters, visualize_queue))
-    furl_transforms_process.start()
-    visualize_process.start()
-    furl_transforms = furl_transforms_queue.get()
-    obj_text = visualize_queue.get()
-    furl_transforms_process.join()
-    visualize_process.join()
+    with Pool(processes=2) as pool:
+        furl_transforms_result = pool.apply_async(
+            load_furl_transforms_from_parameters, (parameters,))
+        visualize_result = pool.apply_async(
+            visualize_wind_turbine_from_parameters, (parameters,))
+        furl_transforms = furl_transforms_result.get()
+        obj_text = visualize_result.get()
     return {
         'objText': obj_text,
         'furlTransforms': furl_transforms
