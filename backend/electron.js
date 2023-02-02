@@ -54,7 +54,7 @@ electronApp.on('window-all-closed', () => {
 });
 
 function startApi(pythonPath, port) {
-  const options = { cwd: __dirname, stdio: 'inherit' };
+  const options = { cwd: __dirname, stdio: 'inherit', windowsHide: true };
   const childProcess = spawn(pythonPath, ['api.py', port], options);
   childProcess.on('error', (err) => console.error('api.py error', err));
   childProcess.on('exit', (code) => console.log('api.py exit', code));
