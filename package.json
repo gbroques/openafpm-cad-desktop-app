@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder --prepackaged $(find dist -type d -name '*-unpacked')"
+    "dist": "find dist -type d -name '*-unpacked' | xargs electron-builder --prepackaged"
   },
   "keywords": [],
   "author": "G Roques",
