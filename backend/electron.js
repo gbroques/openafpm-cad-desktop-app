@@ -5,11 +5,13 @@ const { spawn } = require('child_process');
 const dotenv = require('dotenv');
 const portfinder = require('portfinder');
 
-async function poll(fn, predicate, milliseconds) {
+async function poll(fn, predicate, milliseconds, maxTries = 10) {
   let result = await fn();
-  while (predicate(result)) {
+  let numTries = 1;
+  while (predicate(result) && numTries < maxTries) {
     await wait(milliseconds);
     result = await fn();
+    numTries++;
   }
   return result;
 }
@@ -20,7 +22,14 @@ function wait(milliseconds) {
 
 function fetchIndexHtml(url) {
   return new Promise(resolve => {
+    console.log('START', 'GET', url);
     const request = http.get(url, (response) => {
+      console.log('END', 'GET', url, response.statusCode);
+      if (response.statusCode !== 200) {
+        console.log('resolve !== 200')
+        resolve({ type: 'error', data: response.statusCode.toString() });
+        return;
+      }
       let data = ''
       response.on('data', (chunk) => {
         data += chunk;
@@ -30,6 +39,7 @@ function fetchIndexHtml(url) {
       });
     });
     request.on('error', (error) => {
+      console.log('END', 'GET', url, error.code);
       resolve({type: 'error', data: error});
     })
     request.end();
@@ -56,6 +66,7 @@ electronApp.on('window-all-closed', () => {
 function startApi(pythonPath, port) {
   const options = { cwd: __dirname, stdio: 'inherit', windowsHide: true };
   const childProcess = spawn(pythonPath, ['api.py', port], options);
+  childProcess.on('spawn', () => console.log('api.py spawn'));
   childProcess.on('error', (err) => console.error('api.py error', err));
   childProcess.on('exit', (code) => console.log('api.py exit', code));
   return childProcess;
@@ -74,7 +85,7 @@ electronApp.whenReady()
     const pythonPath = path.join(rootPath, process.env.PYTHON);
     const childProcess = startApi(pythonPath, port);
     const url = `http://127.0.0.1:${port}/index.html`;
-    await poll(() => fetchIndexHtml(url), (result) => result.type === 'error', 10);
+    await poll(() => fetchIndexHtml(url), (result) => result.type === 'error', 250);
     window.loadURL(url);
     electronApp.on('before-quit', () => {
       childProcess.kill();

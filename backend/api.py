@@ -24,7 +24,7 @@ from typing import Callable, Dict, List, Optional, Union
 
 # Add FreeCAD lib directory to sys.path for importing FreeCAD.
 # ------------------------------------------------------------------------
-root_path = Path(__file__).parent.parent
+root_path = Path(__file__).absolute().parent.parent
 freecad_lib = str(root_path.joinpath(os.environ['FREECAD_LIB']).resolve())
 sys.path.append(freecad_lib)
 # ------------------------------------------------------------------------
@@ -64,7 +64,7 @@ class Api:
 def create_request_handler(operations_by_method_and_path: Dict[str, Callable], directory: Path) -> SimpleHTTPRequestHandler:
     class Handler(SimpleHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
-            super().__init__(*args, directory=directory, **kwargs)
+            super().__init__(*args, directory=str(directory), **kwargs)
 
         def handle_request(self):
             method_and_path = self.command + self.path
@@ -161,7 +161,7 @@ def load_furl_transforms_from_parameters(parameters: dict) -> List[dict]:
 
 
 def visualize_wind_turbine_from_parameters(parameters: dict) -> str:
-    magnafpm_parameters = parameters['magnafpmMM']
+    magnafpm_parameters = parameters['magnafpm']
     user_parameters = parameters['user']
     furling_parameters = parameters['furling']
     return assembly_to_obj(
