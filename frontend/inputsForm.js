@@ -25,6 +25,7 @@ class InputsForm extends LitElement {
     this._parametersByVariant = {};
     this._parametersSchema = {};
     this._form = {};
+    this._validationMessages = {};
     this._isLoading = true;
     this._errorMessage = '';
     this._abortController = null;
@@ -147,8 +148,7 @@ class InputsForm extends LitElement {
   handleSelect(event) {
     const selectedVariant = event.target.value; 
     this._variant = selectedVariant;
-    const parameters = this._parametersByVariant[selectedVariant];
-    this._form = flatten(parameters);
+    this.setForm();
   }
   handleCloseError() {
     this._errorMessage = '';
@@ -160,10 +160,17 @@ class InputsForm extends LitElement {
     const promise = Promise.all([defaultParametersPromise, parametersSchemaPromise]);
     promise.then(([parametersByVariant, parametersSchema]) => {
       this._parametersByVariant = parametersByVariant;
-      this._form = flatten(parametersByVariant[this._variant]);
+      this.setForm();
       this._parametersSchema = parametersSchema;
     });
     this.setPromiseToState(promise);
+  }
+  setForm() {
+    this._form = flatten(this._parametersByVariant[this._variant]);
+    this.setValidationMessages();
+  }
+  setValidationMessages() {
+    this._validationMessages = mapValues(this._form, () => '');
   }
   handleSubmit(event) {
     event.preventDefault();
@@ -221,12 +228,9 @@ class InputsForm extends LitElement {
   }
   handleValueChange(event) {
     const {target} = event;
-    if (target.nextElementSibling) {
-      target.nextElementSibling.innerText = target.validationMessage;
-    }
     const {name, value} = target;
-    const form = this._form;
-    this._form = {...form, [name]: value};
+    this._form = {...this._form, [name]: value};
+    this._validationMessages = {...this._validationMessages, [name]: target.validationMessage};
   }
   getGroupParameters(groupName) {
     const groupProperties = this._parametersSchema?.properties?.[groupName]?.properties ?? {};
@@ -262,6 +266,7 @@ class InputsForm extends LitElement {
                 name,
                 schema,
                 value: this._form[name],
+                validationMessage: this._validationMessages[name],
                 onValueChange: this.handleValueChange
               })
             )}
@@ -278,6 +283,7 @@ class InputsForm extends LitElement {
                 name,
                 schema,
                 value: this._form[name],
+                validationMessage: this._validationMessages[name],
                 onValueChange: this.handleValueChange
               })
             )}
@@ -294,6 +300,7 @@ class InputsForm extends LitElement {
                 name,
                 schema,
                 value: this._form[name],
+                validationMessage: this._validationMessages[name],
                 onValueChange: this.handleValueChange
               })
             )}
@@ -324,6 +331,16 @@ function flattenToGroupByKey(parameters) {
     }, {});
     return {...acc, ...groupByKey};
   }, {});
+}
+
+function mapEntries(obj, entryMapper) {
+  return Object.fromEntries(Object.entries(obj).map(entryMapper));
+}
+
+function mapValues(obj, valueMapper) {
+  return mapEntries(obj, ([key, value]) => (
+    [key, valueMapper(value)]
+  ));
 }
 
 function createdNestedObject(object, groupGetter, valueTransformer) {
@@ -375,7 +392,7 @@ function SchemaInput(props) {
           @input=${props.onValueChange}
           required
         />
-        <p class="validationMessage"></p>
+        <p class="validationMessage">${props.validationMessage}</p>
     </label>
   `
 }
