@@ -85,7 +85,8 @@ electronApp.whenReady()
     const pythonPath = path.join(rootPath, process.env.PYTHON);
     const childProcess = startApi(pythonPath, port);
     const url = `http://127.0.0.1:${port}/index.html`;
-    await poll(() => fetchIndexHtml(url), (result) => result.type === 'error', 250);
+    const maxTries = 30;
+    await poll(() => fetchIndexHtml(url), (result) => result.type === 'error', 300, maxTries);
     window.loadURL(url);
     electronApp.on('before-quit', () => {
       childProcess.kill();
