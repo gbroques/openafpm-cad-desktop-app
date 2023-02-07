@@ -162,24 +162,20 @@
       }
 
       let cleanUp = null;
-      let openAfpmCadVisualization = null;
+      const openAfpmCadVisualization = new OpenAfpmCadVisualization({
+        rootDomElement: visualizationRoot,
+        width: calculateWidth(),
+        height: calculateHeight()
+      });
       const handleResize = () => {
         const width = calculateWidth();
         const height = calculateHeight();
+        visualizationRoot.style.height = height + 'px';
         openAfpmCadVisualization.resize(width, height);
       };
+      window.addEventListener("resize", handleResize, false);
       app.addEventListener("visualize", (event) => {
-        if (cleanUp) {
-          cleanUp();
-        } else {
-          // Only perform once.
-          openAfpmCadVisualization = new OpenAfpmCadVisualization({
-            rootDomElement: visualizationRoot,
-            width: calculateWidth(),
-            height: calculateHeight()
-          });
-          window.addEventListener("resize", handleResize, false);
-        }
+        if (cleanUp) cleanUp();
         visualizationRoot.innerHTML = "";
         const { visualizePromise} = event.detail;
         const loadObjText = () => visualizePromise.then(({objText}) => objText);
