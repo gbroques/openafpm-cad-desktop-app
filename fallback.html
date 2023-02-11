@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>OpenAFPM CAD Visualization</title>
+    <style>
+      html {
+        font-size: 16px;
+        overflow-y: scroll;
+      }
+      body {
+        margin: 0;
+        font-family: sans-serif;
+      }
+      header {
+        background-color: #43A047; /* Green 600 - https://www.materialui.co/colors */
+        color: #FFFFFF;
+        font-size: 1rem;
+        font-weight: bold;
+        padding: calc(8px * 2);
+        position: relative;
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+      .empty-state {
+        text-align: center;
+        padding-top: 25vh;
+        font-size: 1.2rem;
+      }
+      button {
+        border: 1px solid black;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-size: 0.833rem;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: background-color 250ms ease-in-out;
+      }
+      button:hover {
+        background-color: rgba(0, 0, 0, 0.12);
+      }
+    </style>
+</head>
+<body>
+  <header>
+    OpenAFPM CAD Visualization
+  </header>
+  <div class="empty-state">
+    <svg fill="#43A047" width="40" height="40" focusable="false" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"></path>
+    </svg>
+    <p>Failed to Load</p>
+    <button>Retry</button>
+  </div>
+  <script>
+    document.querySelector('button').addEventListener('click', () => {
+      window.electronAPI.retry();
+    });
+  </script>
+</body>
+</html>

@@ -80,7 +80,7 @@
         display: inline-block;
         width: 35px;
         height: 35px;
-        border: 3px solid var(--secondary-color-main);
+        border: 3px solid var(--primary-color-main);
         border-radius: 50%;
         border-right-color: transparent;
         animation: spin 1s ease infinite;
@@ -181,6 +181,7 @@
         const loadObjText = () => visualizePromise.then(({objText}) => objText);
         const furlTransformsPromise = visualizePromise.then(({furlTransforms}) => furlTransforms);
         const transformsByNamePromise = furlTransformsPromise.then(furlTransforms => ({furl: furlTransforms}));
+        transformsByNamePromise.catch(error => error.name !== 'AbortError' && console.error(error));
         openAfpmCadVisualization.visualize(loadObjText, "WindTurbine", transformsByNamePromise);
         handleResize();
         const handleMouseMove = (event) => openAfpmCadVisualization.handleMouseMove(event);

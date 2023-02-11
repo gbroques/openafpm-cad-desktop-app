@@ -1,15 +1,17 @@
-const { app: electronApp, BrowserWindow, nativeTheme } = require('electron');
+const { app: electronApp, BrowserWindow, nativeTheme, ipcMain } = require('electron');
 const path = require('path');
 const http = require('http');
+const process = require('process');
 const { spawn } = require('child_process');
 const dotenv = require('dotenv');
 const portfinder = require('portfinder');
 
-async function poll(fn, predicate, milliseconds, maxTries = 10) {
+async function tryWithExponentialBackoff(fn, predicate, maxTries = 8) {
   let result = await fn();
   let numTries = 1;
   while (predicate(result) && numTries < maxTries) {
-    await wait(milliseconds);
+    const timeInMilliseconds = 2 ** numTries * 100;
+    await wait(timeInMilliseconds);
     result = await fn();
     numTries++;
   }
@@ -20,11 +22,29 @@ function wait(milliseconds) {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
+function formatDateWithoutMilliseconds(date) {
+  return date.toISOString().split('.')[0] + 'Z';
+}
+
+class Transaction {
+  constructor() {
+    this.start = new Date();
+  }
+  logStart(...args) {
+    console.log(formatDateWithoutMilliseconds(this.start), `[PID ${process.pid}]`, 'START', ...args)
+  }
+  logEnd(...args) {
+    console.log(formatDateWithoutMilliseconds(new Date()), `[PID ${process.pid}]`, 'END  ', ...args)
+  }
+}
+
 function fetchIndexHtml(url) {
+  
   return new Promise(resolve => {
-    console.log('START', 'GET', url);
+    const transaction = new Transaction();
+    transaction.logStart('GET', url);
     const request = http.get(url, (response) => {
-      console.log('END', 'GET', url, response.statusCode);
+      transaction.logEnd('GET', url, response.statusCode);
       if (response.statusCode !== 200) {
         console.log('resolve !== 200')
         resolve({ type: 'error', data: response.statusCode.toString() });
@@ -39,7 +59,7 @@ function fetchIndexHtml(url) {
       });
     });
     request.on('error', (error) => {
-      console.log('END', 'GET', url, error.code);
+      transaction.logEnd('GET', url, error.code);
       resolve({type: 'error', data: error});
     })
     request.end();
@@ -51,7 +71,8 @@ function createWindow() {
     width: 800,
     height: 600,
     webPreferences: {
-      nodeIntegration: false
+      nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.js')
     },
     icon: path.join(__dirname, 'icon.png')
   });
@@ -81,13 +102,25 @@ nativeTheme.themeSource = 'light';
 electronApp.whenReady()
   .then(createWindow)
   .then(async (window) => {
+    window.loadFile('loading.html');
     const port = await portfinder.getPortPromise({ port: 8000, stopPort: 65535 });
     const pythonPath = path.join(rootPath, process.env.PYTHON);
     const childProcess = startApi(pythonPath, port);
     const url = `http://127.0.0.1:${port}/index.html`;
-    const maxTries = 30;
-    await poll(() => fetchIndexHtml(url), (result) => result.type === 'error', 300, maxTries);
-    window.loadURL(url);
+    const result = await tryWithExponentialBackoff(() => fetchIndexHtml(url), (result) => result.type === 'error');
+    if (result.type === 'error') {
+      const handleRetry = () => {
+        fetchIndexHtml(url).then(result => {
+          if (result.type === 'success') {
+            window.loadURL(url);
+          }
+        });
+      };
+      ipcMain.on('retry', handleRetry);
+      window.loadFile('fallback.html');
+    } else {
+      window.loadURL(url);
+    }
     electronApp.on('before-quit', () => {
       childProcess.kill();
     });

@@ -36,12 +36,14 @@ export default class App extends LitElement {
   }
   handleVisualize(event) {
     const { visualizePromise, createArchive } = event.detail;
-    visualizePromise.then(() => {
-      this._tab = Tab.Visualize;
-    });
+    visualizePromise
+      .then(() => {
+        this._tab = Tab.Visualize;
+      })
+      .catch(error => error.name !== 'AbortError' && console.error(error));
     this._createArchive = createArchive;
   }
-  handleDownloadButtonClick(event) {
+  handleDownloadButtonClick() {
     if (this._isArchiveLoading) return;
     this._isArchiveLoading = true;
     this._createArchive()
@@ -66,7 +68,9 @@ export default class App extends LitElement {
         link.click();
       })
       .catch(error => {
-        this._errorMessage = error.message;
+        if (error.name !== 'AbortError') {
+          this._errorMessage = error.message;
+        }
       })
       .finally(() => {
         this._isArchiveLoading = false;

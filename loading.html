@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>OpenAFPM CAD Visualization</title>
+    <style>
+      html {
+        font-size: 16px;
+        overflow-y: scroll;
+      }
+      body {
+        margin: 0;
+        font-family: sans-serif;
+      }
+      header {
+        background-color: #43A047; /* Green 600 - https://www.materialui.co/colors */
+        color: #FFFFFF;
+        font-size: 1rem;
+        font-weight: bold;
+        padding: calc(8px * 2);
+        position: relative;
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+      .empty-state {
+        text-align: center;
+        padding-top: 25vh;
+        font-size: 1.2rem;
+      }
+      #loading-spinner {
+        display: inline-block;
+        width: 35px;
+        height: 35px;
+        border: 3px solid #43A047;
+        border-radius: 50%;
+        border-right-color: transparent;
+        animation: spin 1s ease infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      @-webkit-keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+</head>
+<body>
+  <header>
+    OpenAFPM CAD Visualization
+  </header>
+  <div class="empty-state">
+    <div id="loading-spinner"></div>
+    <p>Loading</p>
+  </div>
+</body>
+</html>

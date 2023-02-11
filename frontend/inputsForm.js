@@ -201,7 +201,8 @@ class InputsForm extends LitElement {
       headers: {
         'Content-Type': 'application/json',
       },
-      method: 'POST'
+      method: 'POST',
+      signal: this._abortController.signal
     });
   }
   setPromiseToState(promise) {
