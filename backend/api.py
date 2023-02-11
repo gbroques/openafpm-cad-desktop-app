@@ -26,7 +26,7 @@ from typing import Callable, Dict, List, Optional, Union
 # ------------------------------------------------------------------------
 root_path = Path(__file__).absolute().parent.parent
 freecad_lib = str(root_path.joinpath(os.environ['FREECAD_LIB']).resolve())
-sys.path.append(freecad_lib)
+sys.path.insert(1, freecad_lib)
 # ------------------------------------------------------------------------
 
 import FreeCAD
