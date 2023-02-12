@@ -1,6 +1,6 @@
 {
   "name": "openafpm-cad-desktop-app",
-  "version": "1.0.0",
+  "version": "1.0.0-SNAPSHOT",
   "description": "Desktop application to visualize wind turbine designs.",
   "main": "backend/electron.js",
   "scripts": {
