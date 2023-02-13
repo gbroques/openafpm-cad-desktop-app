@@ -24,6 +24,7 @@ from inspect import signature
 from multiprocessing import Pool, Process, Queue
 from pathlib import Path
 from socketserver import ThreadingMixIn
+import re
 from typing import Callable, Dict, List, Optional, Union
 
 # Add FreeCAD lib directory to sys.path for importing FreeCAD.
@@ -54,7 +55,7 @@ class Api:
 
     def _route(self, path: str, method=str) -> Callable:
         def decorator(operation: Callable):
-            method_and_path = method + path
+            method_and_path = method + ' ' + path
             self._operations_by_method_and_path[method_and_path] = operation
             return operation
         return decorator
@@ -67,39 +68,61 @@ def create_request_handler(operations_by_method_and_path: Dict[str, Callable], d
 
         def handle_request(self):
             self.log_request()
-            method_and_path = self.command + self.path
-            operation = operations_by_method_and_path[method_and_path]
-            if operation:
-                request_body = self.get_request_body()
-
-                def execute(queue: Queue):
-                    try:
-                        date_time = self.log_date_time_string()
-                        sys.stderr.write(
-                            f'{date_time} [PID {os.getpid()}] [PPID {os.getppid()}] {operation.__name__}\n')
-                        value = invoke_operation(operation, request_body)
-                        has_exception = False
-                    except Exception as exception:
-                        print(traceback.format_exc())
-                        value = exception
-                        has_exception = True
-                    queue.put({'value': value, 'has_exception': has_exception})
-                queue = Queue()
-                process = Process(target=execute, args=(queue,))
-                process.start()
-                result = queue.get()
-                process.join()
-                if result['has_exception']:
-                    http_status = HTTPStatus.INTERNAL_SERVER_ERROR
-                    response = {'error': str(result['value'])}
-                else:
-                    http_status = HTTPStatus.OK
-                    response = result['value']
-                self.send_response_only(http_status)
-                self.write(response)
-                self.log_request(http_status)
+            if self.path.startswith('/api'):
+                self.handle_api_request()
             elif self.command == 'GET':
                 return SimpleHTTPRequestHandler.do_GET(self)
+
+        def handle_api_request(self):
+            for method_and_path, operation in operations_by_method_and_path.items():
+                method, path = method_and_path.split(' ')
+                path_variable_pattern = re.compile(r'<([A-Za-z-_]+)>')
+                path_variable_match = re.search(
+                    path_variable_pattern, path)
+                path_matches = path == self.path
+                path_variables_by_name = {}
+                if path_variable_match:
+                    path_variable_name = path_variable_match.group(1)
+                    path_pattern = re.compile(path.replace(
+                        path_variable_match.group(0), '([A-Za-z0-9-_]+)'))
+                    path_value_match = path_pattern.match(self.path)
+                    if path_value_match:
+                        path_value = path_value_match.group(1)
+                        path_variables_by_name[path_variable_name] = path_value
+                        path_matches = True
+                if method == self.command and path_matches:
+                    request_body = self.get_request_body()
+                    def execute(queue: Queue):
+                        try:
+                            date_time = self.log_date_time_string()
+                            sys.stderr.write(
+                                f'{date_time} [PID {os.getpid()}] [PPID {os.getppid()}] {operation.__name__}\n')
+                            request = {
+                                'body': request_body,
+                                'path': path_variables_by_name
+                            }
+                            value = invoke_operation(operation, request)
+                            has_exception = False
+                        except Exception as exception:
+                            sys.stderr.write(traceback.format_exc() + '\n')
+                            value = exception
+                            has_exception = True
+                        queue.put(
+                            {'value': value, 'has_exception': has_exception})
+                    queue = Queue()
+                    process = Process(target=execute, args=(queue,))
+                    process.start()
+                    result = queue.get()
+                    process.join()
+                    if result['has_exception']:
+                        http_status = HTTPStatus.INTERNAL_SERVER_ERROR
+                        response = {'error': str(result['value'])}
+                    else:
+                        http_status = HTTPStatus.OK
+                        response = result['value']
+                    self.send_response_only(http_status)
+                    self.write(response)
+                    self.log_request(http_status)
 
         def write(self, response: Union[dict, bytes]):
             is_dict = type(response) == dict
@@ -114,7 +137,7 @@ def create_request_handler(operations_by_method_and_path: Dict[str, Callable], d
 
         def get_request_body(self) -> Optional[dict]:
             content_length = self.headers['Content-Length']
-            if content_length:
+            if content_length and content_length != '0':
                 input = self.rfile.read(int(content_length))
                 request_body = json.loads(input)
             else:
@@ -207,28 +230,42 @@ def load_furl_transforms_from_parameters(parameters: dict) -> List[dict]:
                                 furling_parameters)
 
 
-def visualize_wind_turbine_from_parameters(parameters: dict) -> str:
-    import FreeCAD
-    from openafpm_cad_core.app import Assembly, assembly_to_obj
+def visualize_from_parameters(parameters: dict, assembly) -> str:
+    from openafpm_cad_core.app import assembly_to_obj
     magnafpm_parameters = parameters['magnafpm']
     user_parameters = parameters['user']
     furling_parameters = parameters['furling']
     return assembly_to_obj(
-        Assembly.WIND_TURBINE,
+        assembly,
         magnafpm_parameters,
         user_parameters,
         furling_parameters)
 
 
-@api.post('/api/visualize')
-def visualize(parameters: dict) -> dict:
-    with Pool(processes=2) as pool:
-        furl_transforms_result = pool.apply_async(
-            load_furl_transforms_from_parameters, (parameters,))
-        visualize_result = pool.apply_async(
-            visualize_wind_turbine_from_parameters, (parameters,))
-        furl_transforms = furl_transforms_result.get()
-        obj_text = visualize_result.get()
+@api.post('/api/visualize/<assembly>')
+def visualize(request: dict) -> dict:
+    import FreeCAD
+    from openafpm_cad_core.app import Assembly
+    parameters = request['body']
+    assembly_path_parameter = request['path']['assembly']
+    assembly = {
+        'WindTurbine': Assembly.WIND_TURBINE,
+        'StatorMold': Assembly.STATOR_MOLD,
+        'RotorMold': Assembly.ROTOR_MOLD,
+        'MagnetJig': Assembly.MAGNET_JIG,
+        'CoilWinder': Assembly.COIL_WINDER
+    }[assembly_path_parameter]
+    if assembly == Assembly.WIND_TURBINE:
+        with Pool(processes=2) as pool:
+            furl_transforms_result = pool.apply_async(
+                load_furl_transforms_from_parameters, (parameters,))
+            visualize_result = pool.apply_async(
+                visualize_from_parameters, (parameters, assembly))
+            furl_transforms = furl_transforms_result.get()
+            obj_text = visualize_result.get()
+    else:
+        obj_text = visualize_from_parameters(parameters, assembly)
+        furl_transforms = []
     return {
         'objText': obj_text,
         'furlTransforms': furl_transforms
@@ -236,9 +273,10 @@ def visualize(parameters: dict) -> dict:
 
 
 @api.post('/api/archive')
-def handle_create_archive(parameters: dict) -> bytes:
+def handle_create_archive(request: dict) -> bytes:
     import FreeCAD
     from openafpm_cad_core.app import create_archive
+    parameters = request['body']
     magnafpm_parameters = parameters['magnafpm']
     user_parameters = parameters['user']
     furling_parameters = parameters['furling']

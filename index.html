@@ -19,6 +19,7 @@
         --h4: 1.2rem;
         --h5: 1rem;
         --h6: 0.833rem;
+        --navigation-rail-width: 80px;
       }
       html[data-theme='light'] {
         --primary-color-main: #43A047; /* Green 600 - https://www.materialui.co/colors */
@@ -58,6 +59,11 @@
         transition: var(--transition-duration-standard) ease-in-out;
         margin: 0;
         font-family: sans-serif;
+        display: grid;
+        grid-template-rows: min-content 1fr;
+      }
+      html, body {
+        height: 100%;
       }
       header {
         display: flex;
@@ -145,14 +151,109 @@
     window.addEventListener("load", handleLoad);
     function handleLoad() {
       document.getElementById("loading-spinner").remove();
-      import("./node_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js")
+      const openAfpmCadVisualizationPromise = import(
+        "./node_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js"
+      );
+      const enumsPromise = import("./frontend/enums.js");
+      Promise.all([openAfpmCadVisualizationPromise, enumsPromise])
         .then(setup);
     }
-    function setup({default: OpenAfpmCadVisualization}) {
+    function setup([{default: OpenAfpmCadVisualization}, enums]) {
+      const { Tab, Preset, Assembly } = enums;
       const app = document.querySelector("x-app");
+
+      const initialState = {
+        preset: Preset.T_SHAPE,
+        assembly: Assembly.WindTurbine,
+        tab: Tab.Inputs,
+        parametersByPreset: null,
+        parametersSchema: null, 
+        form: null,
+        loading: false,
+        errorMessage: '',
+        archiveLoading: false,
+        archiveErrorMessage: ''
+      };
+      Object.assign(app, initialState);
+      const setState = (nextState) => {
+        Object.assign(app, nextState);
+      };
+
+      function fetchJson(...args) {
+        return fetch(...args)
+          .then(response => response.json())
+          .then(response => {
+            if (response.error) {
+              throw new Error(response.error);
+            }
+            return response;
+          });
+      }
+
+      const defaultParametersPromise = fetchJson('/api/defaultparameters');
+      const parametersSchemaPromise = fetchJson('/api/parametersschema');
+
+      const promise = Promise.all([defaultParametersPromise, parametersSchemaPromise]);
+
+      function setForm() {
+        const parameters = flatten(app.parametersByPreset[app.preset]);
+        const form = mapValues(parameters, value => ({value, validationMessage: ''}));
+        setState({ form });
+      }
+      promise.then(([parametersByPreset, parametersSchema]) => {
+        const parameters = flatten(parametersByPreset[initialState.preset]);
+        const form = mapValues(parameters, value => ({value, validationMessage: ''}));
+        setState({
+          parametersByPreset,
+          parametersSchema
+        });
+        setForm();
+      })
+      setPromiseToState(promise);
+
+      function setPromiseToState(promise) {
+        setState({ loading: true });
+        promise.then(() => {
+          setState({ loading: false });
+        })
+        .catch(error => {
+          if (error.name !== 'AbortError') {
+            setState({
+              errorMessage: error.message,
+              loading: false
+            });
+          }
+        });
+      }
+
+      app.addEventListener("close-error", () => {
+        setState({ errorMessage: '' });
+      });
+
+      app.addEventListener("select-preset", (event) => {
+        const { selectedPreset } = event.detail;
+        setState({ preset: selectedPreset });
+        setForm();
+      });
+
+      app.addEventListener('input-change', event => {
+        const { name, value, validationMessage } = event.detail;
+        setState({
+          form: {
+            ...app.form,
+            [name]: {
+              value,
+              validationMessage
+            }
+          }
+        });
+      });
+
       function calculateWidth() {
-        // Get the width of document (without the scrollbar).
-        return document.documentElement.clientWidth;
+        // Get the width of document (without the scrollbar) minus navigation rail width.
+        const navigationRailWidth = parseInt(getComputedStyle(document.documentElement)
+          .getPropertyValue('--navigation-rail-width'));
+        return document.documentElement.clientWidth - navigationRailWidth;
       }
       function calculateHeight() {
         const headerHeight = document.querySelector("header").offsetHeight;
@@ -162,6 +263,7 @@
       }
 
       let cleanUp = null;
+      let abortController = null;
       const openAfpmCadVisualization = new OpenAfpmCadVisualization({
         rootDomElement: visualizationRoot,
         width: calculateWidth(),
@@ -174,23 +276,153 @@
         openAfpmCadVisualization.resize(width, height);
       };
       window.addEventListener("resize", handleResize, false);
-      app.addEventListener("visualize", (event) => {
+      function handleVisualize() {
         if (cleanUp) cleanUp();
+        if (app.loading) abortController.abort();
+        abortController = new AbortController();
+        const visualizePromise = fetchJson(`/api/visualize/${app.assembly}`, {
+          body: buildRequestBody(app.form, app.parametersByPreset[app.preset]),
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          method: 'POST',
+          signal: abortController.signal
+        });
+        setPromiseToState(visualizePromise);
+        visualizePromise.then(() => {
+          setState({ tab: Tab.Visualize });
+        });
         visualizationRoot.innerHTML = "";
-        const { visualizePromise} = event.detail;
         const loadObjText = () => visualizePromise.then(({objText}) => objText);
         const furlTransformsPromise = visualizePromise.then(({furlTransforms}) => furlTransforms);
         const transformsByNamePromise = furlTransformsPromise.then(furlTransforms => ({furl: furlTransforms}));
         transformsByNamePromise.catch(error => error.name !== 'AbortError' && console.error(error));
-        openAfpmCadVisualization.visualize(loadObjText, "WindTurbine", transformsByNamePromise);
+        openAfpmCadVisualization.visualize(loadObjText, app.assembly, transformsByNamePromise);
         handleResize();
         const handleMouseMove = (event) => openAfpmCadVisualization.handleMouseMove(event);
         window.addEventListener("mousemove", handleMouseMove, false);
         cleanUp = () => {
           window.removeEventListener("mousemove", handleMouseMove);
         };
+      }
+      const debouncedVisualizeHandler = debounce(handleVisualize, 250);
+      app.addEventListener("visualize", debouncedVisualizeHandler);
+      app.addEventListener("select-assembly", (event) => {
+        const { selectedAssembly } = event.detail;
+        if (app.assembly !== selectedAssembly) {
+          setState({ assembly: selectedAssembly });
+          const hasClickedVisualizeButtonOnce = Boolean(cleanUp);
+          if (hasClickedVisualizeButtonOnce) debouncedVisualizeHandler();
+        }
+      });
+      app.addEventListener("select-tab", (event) => {
+        const { selectedTab } = event.detail;
+        setState({ tab: selectedTab });
+      });
+      app.addEventListener("download-archive", () => {
+        if (app.archiveLoading) return;
+        setState({ archiveLoading: true });
+        fetch('/api/archive', {
+          body: buildRequestBody(app.form, app.parametersByPreset[app.preset]),
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          method: 'POST'
+        })
+        .then(response => {
+          if (!response.ok) {
+            return response.json();
+          }
+          return response;
+        })
+        .then(response => {
+          if (response.error) {
+            throw new Error(response.error);
+          }
+          return response;
+        })
+        .then(response => response.blob())
+        .then(blob => {
+          this._errorMessage = '';
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = 'WindTurbine.zip';
+          link.click();
+        })
+        .catch(error => {
+          if (error.name !== 'AbortError') {
+            setState({ archiveErrorMessage: error.message });
+          }
+        })
+        .finally(() => {
+          setState({ archiveLoading: false });
+        });
       });
     }
+
+    function flatten(object) {
+      return Object.values(object)
+        .reduce((acc, obj) => ({...acc, ...obj}), {});
+    }
+
+    function mapEntries(obj, entryMapper) {
+      return Object.fromEntries(Object.entries(obj).map(entryMapper));
+    }
+
+    function mapValues(obj, valueMapper) {
+      return mapEntries(obj, ([key, value]) => (
+        [key, valueMapper(value)]
+      ));
+    }
+
+    function buildRequestBody(form, parameters) {
+      const valueByKey = mapValues(form, ({ value }) => value);
+      const groupByKey = flattenToGroupByKey(parameters);
+      const valueTransformer = value => isNaN(value) ? value : parseFloat(value);
+      const parameterByGroup = createdNestedObject(valueByKey,
+        key => groupByKey[key],
+        valueTransformer);
+      return JSON.stringify(parameterByGroup);
+    }
+
+    function flattenToGroupByKey(parameters) {
+      const entries = Object.entries(parameters);
+      return entries.reduce((acc, entry) => {
+        const [group, valueByKey] = entry;
+        const keys = Object.keys(valueByKey);
+        const groupByKey = keys.reduce((obj, key) => {
+          return {...obj, [key]: group};
+        }, {});
+        return {...acc, ...groupByKey};
+      }, {});
+    }
+
+    function createdNestedObject(object, groupGetter, valueTransformer) {
+      const entries = Object.entries(object);
+      return entries.reduce((acc, entry) => {
+        const [key, value] = entry;
+        const group = groupGetter(key);
+        if (group === undefined) {
+          return acc;
+        }
+        if (acc[group] === undefined) {
+          acc[group] = {};
+        }
+        acc[group][key] = valueTransformer(value);
+        return acc;
+      }, {});
+    }
+
+    function debounce(callback, wait) {
+      let timeoutId = null;
+      return (...args) => {
+        window.clearTimeout(timeoutId);
+        timeoutId = window.setTimeout(() => {
+          callback.apply(null, args);
+        }, wait);
+      };
+    }
+
   </script>
 </body>
 </html>

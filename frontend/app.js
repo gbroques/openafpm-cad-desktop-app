@@ -1,105 +1,128 @@
 import { LitElement, html, css } from "lit";
+import { Tab, Assembly } from "./enums.js";
 import "./container.js";
 import "./downloadButton.js";
 import "./errorBanner.js";
 import "./header.js"
 import "./inputsForm.js";
+import "./navigationRail.js";
+import "./navigationRailButton.js";
 import "./tab.js";
 import "./tabPanel.js";
 import "./tabs.js";
 
-const Tab = {
-  Inputs: 'Inputs',
-  Visualize: 'Visualize'
-};
-
 export default class App extends LitElement {
   static properties = {
-    _tab: { type: String, state: true },
-    _isArchiveLoading: { type: Boolean, state: true },
-    _errorMessage: { type: String, state: true }
+    preset: { type: String },
+    parametersByPreset: { attribute: false },
+    parametersSchema: { attribute: false }, 
+    form: { attribute: false },
+    loading: { type: Boolean },
+    errorMessage: { type: String },
+    assembly: { type: String },
+    tab: { type: String },
+    archiveLoading: { type: Boolean },
+    archiveErrorMessage: { type: String }
   };
   static styles = css`
     :host {
+      display: grid;
+      grid-template-rows: min-content 1fr;
+    }
+    .visualizationTabContents {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+    .slot {
       display: block;
+      width: calc(100% - var(--navigation-rail-width));
+    }
+    .tabs {
+      z-index: 10;
     }
   `;
-  constructor() {
-    super();
-    this._tab = Tab.Inputs;
-    this._isArchiveLoading = false;
-    this._errorMessage = '';
-    this._createArchive = null;
+  handleTabSelect(event) {
+    const { selectedValue } = event.detail;
+    this.dispatchEvent(new CustomEvent('select-tab', {
+      detail: { selectedTab: selectedValue },
+      bubbles: true,
+      composed: true
+    }));
   }
-  handleSelect(event) {
-    this._tab = event.detail.selectedValue;
+  handleAssemblySelect(event) {
+    const { selectedValue } = event.detail;
+    this.dispatchEvent(new CustomEvent('select-assembly', {
+      detail: { selectedAssembly: selectedValue },
+      bubbles: true,
+      composed: true
+    }));
   }
-  handleVisualize(event) {
-    const { visualizePromise, createArchive } = event.detail;
-    visualizePromise
-      .then(() => {
-        this._tab = Tab.Visualize;
-      })
-      .catch(error => error.name !== 'AbortError' && console.error(error));
-    this._createArchive = createArchive;
-  }
-  handleDownloadButtonClick() {
-    if (this._isArchiveLoading) return;
-    this._isArchiveLoading = true;
-    this._createArchive()
-      .then(response => {
-        if (!response.ok) {
-          return response.json();
-        }
-        return response;
-      })
-      .then(response => {
-        if (response.error) {
-          throw new Error(response.error);
-        }
-        return response;
-      })
-      .then(response => response.blob())
-      .then(blob => {
-        this._errorMessage = '';
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'WindTurbine.zip';
-        link.click();
-      })
-      .catch(error => {
-        if (error.name !== 'AbortError') {
-          this._errorMessage = error.message;
-        }
-      })
-      .finally(() => {
-        this._isArchiveLoading = false;
-      });
+  handleDownloadArchive() {
+    this.dispatchEvent(new CustomEvent('download-archive', {
+      bubbles: true,
+      composed: true
+    }));
   }
   render() {
     return html`
-      <x-tabs @select=${this.handleSelect}>
-        <x-tab value=${Tab.Inputs} ?selected=${this._tab === Tab.Inputs}>
+      <x-tabs class="tabs" @select=${this.handleTabSelect}>
+        <x-tab value=${Tab.Inputs} ?selected=${this.tab === Tab.Inputs}>
           Inputs
         </x-tab>
-        <x-tab value=${Tab.Visualize} ?selected=${this._tab === Tab.Visualize}>
+        <x-tab value=${Tab.Visualize} ?selected=${this.tab === Tab.Visualize}>
           Visualize
         </x-tab>
       </x-tabs>
-      <x-tab-panel ?visible=${this._tab === Tab.Inputs}>
+      <x-tab-panel ?visible=${this.tab === Tab.Inputs}>
         <x-container>
-          <x-inputs-form @visualize=${this.handleVisualize}>
+          <x-inputs-form
+            .preset=${this.preset}
+            .parametersByPreset=${this.parametersByPreset}
+            .parametersSchema=${this.parametersSchema}
+            .form=${this.form}
+            ?loading=${this.loading}
+            .errorMessage=${this.errorMessage}>
         </x-inputs-form>
         </x-container>
       </x-tab-panel>
-      <x-tab-panel ?visible=${this._tab === Tab.Visualize}>
-        <slot></slot>
-        <x-download-button
-          ?disabled=${this._createArchive === null || this._isArchiveLoading}
-          ?loading=${this._isArchiveLoading}
-          .errorMessage=${this._errorMessage}
-          @click=${this.handleDownloadButtonClick}>
-        </x-download-button>
+      <x-tab-panel ?visible=${this.tab === Tab.Visualize}>
+        <div class="visualizationTabContents">
+          <x-navigation-rail @select=${this.handleAssemblySelect}>
+            <x-navigation-rail-button
+              value=${Assembly.WindTurbine}
+              ?selected=${this.assembly === Assembly.WindTurbine}>
+                Wind Turbine
+            </x-navigation-rail-button>
+            <x-navigation-rail-button
+              value=${Assembly.StatorMold}
+              ?selected=${this.assembly === Assembly.StatorMold}>
+                Stator Mold
+            </x-navigation-rail-button>
+            <x-navigation-rail-button
+              value=${Assembly.RotorMold}
+              ?selected=${this.assembly === Assembly.RotorMold}>
+                Rotor Mold
+            </x-navigation-rail-button>
+            <x-navigation-rail-button
+              value=${Assembly.MagnetJig}
+              ?selected=${this.assembly === Assembly.MagnetJig}>
+                Magnet Jig
+            </x-navigation-rail-button>
+            <x-navigation-rail-button
+              value=${Assembly.CoilWinder}
+              ?selected=${this.assembly === Assembly.CoilWinder}>
+                Coil Winder
+            </x-navigation-rail-button>
+          </x-navigation-rail>
+          <slot class="slot"></slot>
+          <x-download-button
+            ?disabled=${this.form === null || this.archiveLoading}
+            ?loading=${this.archiveLoading}
+            .errorMessage=${this.archiveErrorMessage}
+            @click=${this.handleDownloadArchive}>
+          </x-download-button>
+        </div>
       </x-tab-panel>
     `;
   }
