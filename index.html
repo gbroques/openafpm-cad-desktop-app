@@ -270,10 +270,12 @@
         height: calculateHeight()
       });
       const handleResize = () => {
-        const width = calculateWidth();
-        const height = calculateHeight();
-        visualizationRoot.style.height = height + 'px';
-        openAfpmCadVisualization.resize(width, height);
+        if (app.tab === Tab.Visualize) {
+          const width = calculateWidth();
+          const height = calculateHeight();
+          visualizationRoot.style.height = height + 'px';
+          openAfpmCadVisualization.resize(width, height);
+        }
       };
       window.addEventListener("resize", handleResize, false);
       function handleVisualize() {
@@ -291,6 +293,9 @@
         setPromiseToState(visualizePromise);
         visualizePromise.then(() => {
           setState({ tab: Tab.Visualize });
+          // resize as a macro-task to ensure DAT GUI
+          // is visible before setting its top position.
+          setTimeout(handleResize);
         });
         visualizationRoot.innerHTML = "";
         const loadObjText = () => visualizePromise.then(({objText}) => objText);
@@ -305,7 +310,7 @@
           window.removeEventListener("mousemove", handleMouseMove);
         };
       }
-      const debouncedVisualizeHandler = debounce(handleVisualize, 250);
+      const debouncedVisualizeHandler = debounce(handleVisualize, 200);
       app.addEventListener("visualize", debouncedVisualizeHandler);
       app.addEventListener("select-assembly", (event) => {
         const { selectedAssembly } = event.detail;
@@ -318,6 +323,9 @@
       app.addEventListener("select-tab", (event) => {
         const { selectedTab } = event.detail;
         setState({ tab: selectedTab });
+        // resize as a macro-task to ensure DAT GUI
+        // is visible before setting its top position.
+        setTimeout(handleResize);
       });
       app.addEventListener("download-archive", () => {
         if (app.archiveLoading) return;
