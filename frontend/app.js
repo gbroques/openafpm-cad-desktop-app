@@ -67,14 +67,14 @@ export default class App extends LitElement {
   render() {
     return html`
       <x-tabs class="tabs" @select=${this.handleTabSelect}>
-        <x-tab value=${Tab.Inputs} ?selected=${this.tab === Tab.Inputs}>
+        <x-tab value=${Tab.INPUTS} ?selected=${this.tab === Tab.INPUTS}>
           Inputs
         </x-tab>
-        <x-tab value=${Tab.Visualize} ?selected=${this.tab === Tab.Visualize}>
+        <x-tab value=${Tab.VISUALIZE} ?selected=${this.tab === Tab.VISUALIZE}>
           Visualize
         </x-tab>
       </x-tabs>
-      <x-tab-panel ?visible=${this.tab === Tab.Inputs}>
+      <x-tab-panel ?visible=${this.tab === Tab.INPUTS}>
         <x-container>
           <x-inputs-form
             .preset=${this.preset}
@@ -86,32 +86,32 @@ export default class App extends LitElement {
         </x-inputs-form>
         </x-container>
       </x-tab-panel>
-      <x-tab-panel ?visible=${this.tab === Tab.Visualize}>
+      <x-tab-panel ?visible=${this.tab === Tab.VISUALIZE}>
         <div class="visualizationTabContents">
           <x-navigation-rail @select=${this.handleAssemblySelect}>
             <x-navigation-rail-button
-              value=${Assembly.WindTurbine}
-              ?selected=${this.assembly === Assembly.WindTurbine}>
+              value=${Assembly.WIND_TURBINE}
+              ?selected=${this.assembly === Assembly.WIND_TURBINE}>
                 Wind Turbine
             </x-navigation-rail-button>
             <x-navigation-rail-button
-              value=${Assembly.StatorMold}
-              ?selected=${this.assembly === Assembly.StatorMold}>
+              value=${Assembly.STATOR_MOLD}
+              ?selected=${this.assembly === Assembly.STATOR_MOLD}>
                 Stator Mold
             </x-navigation-rail-button>
             <x-navigation-rail-button
-              value=${Assembly.RotorMold}
-              ?selected=${this.assembly === Assembly.RotorMold}>
+              value=${Assembly.ROTOR_MOLD}
+              ?selected=${this.assembly === Assembly.ROTOR_MOLD}>
                 Rotor Mold
             </x-navigation-rail-button>
             <x-navigation-rail-button
-              value=${Assembly.MagnetJig}
-              ?selected=${this.assembly === Assembly.MagnetJig}>
+              value=${Assembly.MAGNET_JIG}
+              ?selected=${this.assembly === Assembly.MAGNET_JIG}>
                 Magnet Jig
             </x-navigation-rail-button>
             <x-navigation-rail-button
-              value=${Assembly.CoilWinder}
-              ?selected=${this.assembly === Assembly.CoilWinder}>
+              value=${Assembly.COIL_WINDER}
+              ?selected=${this.assembly === Assembly.COIL_WINDER}>
                 Coil Winder
             </x-navigation-rail-button>
           </x-navigation-rail>

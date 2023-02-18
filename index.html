@@ -164,8 +164,8 @@
 
       const initialState = {
         preset: Preset.T_SHAPE,
-        assembly: Assembly.WindTurbine,
-        tab: Tab.Inputs,
+        assembly: Assembly.WIND_TURBINE,
+        tab: Tab.INPUTS,
         parametersByPreset: null,
         parametersSchema: null, 
         form: null,
@@ -270,7 +270,7 @@
         height: calculateHeight()
       });
       const handleResize = () => {
-        if (app.tab === Tab.Visualize) {
+        if (app.tab === Tab.VISUALIZE) {
           const width = calculateWidth();
           const height = calculateHeight();
           visualizationRoot.style.height = height + 'px';
@@ -292,7 +292,7 @@
         });
         setPromiseToState(visualizePromise);
         visualizePromise.then(() => {
-          setState({ tab: Tab.Visualize });
+          setState({ tab: Tab.VISUALIZE });
           // resize as a macro-task to ensure DAT GUI
           // is visible before setting its top position.
           setTimeout(handleResize);
