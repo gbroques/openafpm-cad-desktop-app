@@ -6,10 +6,15 @@ import "./circularProgress.js";
 
 class DownloadButton extends LitElement {
   static properties = {
+    title: { type: String },
     disabled: { type: Boolean },
     loading: { type: Boolean },
     errorMessage: { type: String }
   };
+  constructor() {
+    super();
+    this.title = 'Download';
+  }
   static styles = css`
     :host {
       display: block;
@@ -34,7 +39,7 @@ class DownloadButton extends LitElement {
       <x-button
         .variant=${variant}
         ?disabled=${this.disabled}
-        .title="${this.loading ? "Loading..." : this.errorMessage ? this.errorMessage : "Download"}">
+        .title="${this.loading ? "Loading..." : this.errorMessage ? this.errorMessage : this.title}">
         ${this.loading ?
           html`
             <x-circular-progress

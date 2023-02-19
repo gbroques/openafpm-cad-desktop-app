@@ -5,8 +5,13 @@ import "./windTurbineIcon.js";
 
 class ErrorBanner extends LitElement {
   static properties = {
-    message: { type: String }
+    message: { type: String },
+    closeable: { type: Boolean }
   };
+  constructor() {
+    super();
+    this.closeable = false;
+  }
   static styles = css`
     :host {
       display: flex;
@@ -39,11 +44,16 @@ class ErrorBanner extends LitElement {
           ${this.message}
         </x-typography>
       </div>
-      <button style="border: none; background: transparent; cursor: pointer;" @click=${this.handleClose}>
-        <svg fill="#ffffff" width="24" height="24" focusable="false" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path>
-        </svg>
-      </button>
+      ${this.closeable ?
+        html`
+          <button style="border: none; background: transparent; cursor: pointer;" @click=${this.handleClose}>
+            <svg fill="#ffffff" width="24" height="24" focusable="false" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path>
+            </svg>
+          </button>
+        ` :
+        ""
+      }
     `;
   }
 }

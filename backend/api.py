@@ -92,6 +92,7 @@ def create_request_handler(operations_by_method_and_path: Dict[str, Callable], d
                         path_matches = True
                 if method == self.command and path_matches:
                     request_body = self.get_request_body()
+
                     def execute(queue: Queue):
                         try:
                             date_time = self.log_date_time_string()
@@ -284,6 +285,35 @@ def handle_create_archive(request: dict) -> bytes:
     return create_archive(magnafpm_parameters,
                           user_parameters,
                           furling_parameters)
+
+
+@api.post('/api/getcncoverview')
+def get_cnc_overview(request: dict) -> dict:
+    import FreeCAD
+    from openafpm_cad_core.app import preview_dxf_as_svg
+    parameters = request['body']
+    magnafpm_parameters = parameters['magnafpm']
+    user_parameters = parameters['user']
+    furling_parameters = parameters['furling']
+
+    svg = preview_dxf_as_svg(magnafpm_parameters,
+                             user_parameters,
+                             furling_parameters)
+    return {'svg': svg}
+
+
+@api.post('/api/dxfarchive')
+def handle_create_dxf_archive(request: dict) -> bytes:
+    import FreeCAD
+    from openafpm_cad_core.app import export_to_dxf
+    parameters = request['body']
+    magnafpm_parameters = parameters['magnafpm']
+    user_parameters = parameters['user']
+    furling_parameters = parameters['furling']
+
+    return export_to_dxf(magnafpm_parameters,
+                         user_parameters,
+                         furling_parameters)
 
 
 if __name__ == '__main__':

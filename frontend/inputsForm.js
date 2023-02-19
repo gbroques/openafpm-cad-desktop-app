@@ -232,7 +232,10 @@ class InputsForm extends LitElement {
             )}
           </section>
         </fieldset>
-        ${this.errorMessage ? html`<x-error-banner .message="${this.errorMessage}" @close=${this.handleCloseError}></x-error-banner>` : ''}
+        ${this.errorMessage ?
+          html`<x-error-banner .message="${this.errorMessage}" closeable @close=${this.handleCloseError}></x-error-banner>` :
+          ""
+        }
         <button type="submit" ?disabled=${isFormLoading || this.errorMessage} style="position: relative">
           ${isFormLoading ? "Loading..." : "Visualize"}
           ${!isFormLoading && this.loading ? html`<x-circular-progress size="var(--h6)" class="submitButtonCircularProgress" color="var(--background-default)"></x-circular-progress>` : ""}

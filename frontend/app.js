@@ -2,6 +2,7 @@ import { LitElement, html, css } from "lit";
 import { Tab, Assembly } from "./enums.js";
 import "./container.js";
 import "./downloadButton.js";
+import "./emptyState.js";
 import "./errorBanner.js";
 import "./header.js"
 import "./inputsForm.js";
@@ -22,7 +23,12 @@ export default class App extends LitElement {
     assembly: { type: String },
     tab: { type: String },
     archiveLoading: { type: Boolean },
-    archiveErrorMessage: { type: String }
+    archiveErrorMessage: { type: String },
+    cncOverviewLoading: { type: Boolean },
+    cncOverviewErrorMessage: { type: String },
+    cncOverviewSvg: { attribute: false },
+    dxfArchiveLoading: { type: Boolean },
+    dxfArchiveErrorMessage: { type: String },
   };
   static styles = css`
     :host {
@@ -33,6 +39,18 @@ export default class App extends LitElement {
       display: flex;
       width: 100%;
       height: 100%;
+    }
+    .cncOverviewContainer {
+      background-color: black;
+      padding: calc(var(--spacing) * 2);
+    }
+    .centeredContainer {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
     }
     .slot {
       display: block;
@@ -64,6 +82,12 @@ export default class App extends LitElement {
       composed: true
     }));
   }
+  handleDownloadDxfArchive() {
+    this.dispatchEvent(new CustomEvent('download-dxf-archive', {
+      bubbles: true,
+      composed: true
+    }));
+  }
   render() {
     return html`
       <x-tabs class="tabs" @select=${this.handleTabSelect}>
@@ -72,6 +96,9 @@ export default class App extends LitElement {
         </x-tab>
         <x-tab value=${Tab.VISUALIZE} ?selected=${this.tab === Tab.VISUALIZE}>
           Visualize
+        </x-tab>
+        <x-tab value=${Tab.CNC} ?selected=${this.tab === Tab.CNC}>
+          CNC
         </x-tab>
       </x-tabs>
       <x-tab-panel ?visible=${this.tab === Tab.INPUTS}>
@@ -117,12 +144,49 @@ export default class App extends LitElement {
           </x-navigation-rail>
           <slot class="slot"></slot>
           <x-download-button
+          title="Download FreeCAD files"
             ?disabled=${this.form === null || this.archiveLoading}
             ?loading=${this.archiveLoading}
             .errorMessage=${this.archiveErrorMessage}
             @click=${this.handleDownloadArchive}>
           </x-download-button>
         </div>
+      </x-tab-panel>
+      <x-tab-panel ?visible=${this.tab === Tab.CNC}>
+        <!-- Empty State -->
+        ${!this.cncOverviewSvg && !this.cncOverviewLoading && !this.cncOverviewErrorMessage ?
+          html`<x-empty-state></x-empty-state>` :
+          ""
+        }
+        <!-- Loading -->
+        ${!this.cncOverviewSvg && this.cncOverviewLoading && !this.cncOverviewErrorMessage ?
+          html`
+            <div class="centeredContainer">
+              <x-circular-progress size="50px"></x-circular-progress>
+              <p>Loading CNC Overview</p>
+            </div>
+          ` : ""
+        }
+        <!-- Data -->
+        ${this.cncOverviewSvg && !this.cncOverviewLoading && !this.cncOverviewErrorMessage ?
+          html`<div class="cncOverviewContainer" .innerHTML=${this.cncOverviewSvg}></div>` :
+          ""
+        }
+        <!-- Error -->
+        ${!this.cncOverviewSvg && !this.cncOverviewLoading && this.cncOverviewErrorMessage ?
+          html`
+            <div class="centeredContainer">
+              <x-error-banner .message="${this.cncOverviewErrorMessage}" .closeable="${false}"></x-error-banner>
+            </div>
+          ` : ""
+        }
+        <x-download-button
+          title="Download DXF files"
+          ?disabled=${this.form === null || this.dxfArchiveLoading}
+          ?loading=${this.dxfArchiveLoading}
+          .errorMessage=${this.dxfArchiveErrorMessage}
+          @click=${this.handleDownloadDxfArchive}>
+        </x-download-button>
       </x-tab-panel>
     `;
   }

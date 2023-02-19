@@ -78,9 +78,14 @@
         box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
         transition: var(--transition-duration-standard) ease-in-out;
       }
-      .empty-state {
-        text-align: center;
-        padding-top: 25vh;
+      .container {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
       }
       #loading-spinner {
         display: inline-block;
@@ -105,13 +110,13 @@
     <x-theme-toggle></x-theme-toggle>
   </header>
   <x-app>
-    <div id="visualization-root">
-      <div class="empty-state">
-        <div id="loading-spinner"></div>
-        <x-wind-turbine-icon size="65" fill="#9E9E9E" ></x-wind-turbine-icon>
-        <p style="font-size: var(--h2); font-weight: bold;">No Visualization</p>
-        <p style="font-size: 1rem;">Click <strong>Visualize</strong> button on <strong>Inputs</strong> tab.</p>
-      </div>
+    <div id="visualization-root" style="width: 100%; height: 100%">
+      <x-empty-state>
+        <div class="container">
+          <div id="loading-spinner"></div>
+          <p>Loading</p>
+        </div>
+      </x-empty-state>
     </div>
   </x-app>
   <script type="importmap">
@@ -172,7 +177,12 @@
         loading: false,
         errorMessage: '',
         archiveLoading: false,
-        archiveErrorMessage: ''
+        archiveErrorMessage: '',
+        cncOverviewLoading: false,
+        cncOverviewErrorMessage: '',
+        cncOverviewSvg: '',
+        dxfArchiveLoading: false,
+        dxfArchiveErrorMessage: '',
       };
       Object.assign(app, initialState);
       const setState = (nextState) => {
@@ -209,18 +219,18 @@
         });
         setForm();
       })
-      setPromiseToState(promise);
+      setPromiseToState(promise, 'loading', 'errorMessage');
 
-      function setPromiseToState(promise) {
-        setState({ loading: true });
+      function setPromiseToState(promise, loadingProperty, errorMessageProperty) {
+        setState({ [loadingProperty]: true });
         promise.then(() => {
-          setState({ loading: false });
+          setState({ [loadingProperty]: false });
         })
         .catch(error => {
           if (error.name !== 'AbortError') {
             setState({
-              errorMessage: error.message,
-              loading: false
+              [errorMessageProperty]: error.message,
+              [loadingProperty]: false
             });
           }
         });
@@ -264,6 +274,7 @@
 
       let cleanUp = null;
       let abortController = null;
+      let previousBody = null;
       const openAfpmCadVisualization = new OpenAfpmCadVisualization({
         rootDomElement: visualizationRoot,
         width: calculateWidth(),
@@ -282,21 +293,29 @@
         if (cleanUp) cleanUp();
         if (app.loading) abortController.abort();
         abortController = new AbortController();
+        const body = buildRequestBody(app.form, app.parametersByPreset[app.preset]);
         const visualizePromise = fetchJson(`/api/visualize/${app.assembly}`, {
-          body: buildRequestBody(app.form, app.parametersByPreset[app.preset]),
+          body,
           headers: {
             'Content-Type': 'application/json'
           },
           method: 'POST',
           signal: abortController.signal
         });
-        setPromiseToState(visualizePromise);
-        visualizePromise.then(() => {
-          setState({ tab: Tab.VISUALIZE });
-          // resize as a macro-task to ensure DAT GUI
-          // is visible before setting its top position.
-          setTimeout(handleResize);
-        });
+        if (previousBody !== body) {
+          const cncOverviewPromise = fetchJson(`/api/getcncoverview`, {
+            body,
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            method: 'POST'
+          });
+          setState({ cncOverviewSvg: '', cncOverviewErrorMessage: '' })
+          cncOverviewPromise.then(result => setState({ cncOverviewSvg: result.svg }));
+          setPromiseToState(cncOverviewPromise, 'cncOverviewLoading', 'cncOverviewErrorMessage');
+        }
+        setPromiseToState(visualizePromise, 'loading', 'errorMessage');
+
         visualizationRoot.innerHTML = "";
         const loadObjText = () => visualizePromise.then(({objText}) => objText);
         const furlTransformsPromise = visualizePromise.then(({furlTransforms}) => furlTransforms);
@@ -306,6 +325,7 @@
         handleResize();
         const handleMouseMove = (event) => openAfpmCadVisualization.handleMouseMove(event);
         window.addEventListener("mousemove", handleMouseMove, false);
+        previousBody = body;
         cleanUp = () => {
           window.removeEventListener("mousemove", handleMouseMove);
         };
@@ -327,45 +347,55 @@
         // is visible before setting its top position.
         setTimeout(handleResize);
       });
-      app.addEventListener("download-archive", () => {
-        if (app.archiveLoading) return;
-        setState({ archiveLoading: true });
-        fetch('/api/archive', {
-          body: buildRequestBody(app.form, app.parametersByPreset[app.preset]),
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          method: 'POST'
-        })
-        .then(response => {
-          if (!response.ok) {
-            return response.json();
-          }
-          return response;
-        })
-        .then(response => {
-          if (response.error) {
-            throw new Error(response.error);
-          }
-          return response;
-        })
-        .then(response => response.blob())
-        .then(blob => {
-          this._errorMessage = '';
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = 'WindTurbine.zip';
-          link.click();
-        })
-        .catch(error => {
-          if (error.name !== 'AbortError') {
-            setState({ archiveErrorMessage: error.message });
-          }
-        })
-        .finally(() => {
-          setState({ archiveLoading: false });
-        });
-      });
+      function createArchiveDownloadHandler(requestPath, archiveName, loadingProperty, errorMessageProperty) {
+        return () => {
+          if (app[loadingProperty]) return;
+          setState({ [loadingProperty]: true });
+          fetch(requestPath, {
+            body: buildRequestBody(app.form, app.parametersByPreset[app.preset]),
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            method: 'POST'
+          })
+          .then(response => {
+            if (!response.ok) {
+              return response.json();
+            }
+            return response;
+          })
+          .then(response => {
+            if (response.error) {
+              throw new Error(response.error);
+            }
+            return response;
+          })
+          .then(response => response.blob())
+          .then(blob => {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = archiveName;
+            link.click();
+          })
+          .catch(error => {
+            if (error.name !== 'AbortError') {
+              setState({ [errorMessageProperty]: error.message });
+            }
+          })
+          .finally(() => {
+            setState({ [loadingProperty]: false });
+          });
+        };
+      }
+      const handleDownloadArchive = createArchiveDownloadHandler(
+        '/api/archive', 'WindTurbine.zip', 'archiveLoading', 'archiveErrorMessage'
+      );
+      app.addEventListener("download-archive", handleDownloadArchive);
+
+      const handleDownloadDxfArchive = createArchiveDownloadHandler(
+        '/api/dxfarchive', 'WindTurbineDXF.zip', 'dxfArchiveLoading', 'dxfArchiveErrorMessage'
+      );
+      app.addEventListener("download-dxf-archive", handleDownloadDxfArchive);
     }
 
     function flatten(object) {
