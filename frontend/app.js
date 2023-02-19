@@ -12,6 +12,21 @@ import "./tab.js";
 import "./tabPanel.js";
 import "./tabs.js";
 
+// https://github.com/bumbu/svg-pan-zoom/blob/3.6.1/demo/limit-pan.html#L31-L48
+function beforePan(oldPan, newPan) {
+  const gutterWidth = 500;
+  const gutterHeight = 500;
+  const sizes = this.getSizes()
+  const leftLimit = -((sizes.viewBox.x + sizes.viewBox.width) * sizes.realZoom) + gutterWidth;
+  const rightLimit = sizes.width - gutterWidth - (sizes.viewBox.x * sizes.realZoom);
+  const topLimit = -((sizes.viewBox.y + sizes.viewBox.height) * sizes.realZoom) + gutterHeight
+  const bottomLimit = sizes.height - gutterHeight - (sizes.viewBox.y * sizes.realZoom);
+  return {
+    x: Math.max(leftLimit, Math.min(rightLimit, newPan.x)),
+    y: Math.max(topLimit, Math.min(bottomLimit, newPan.y))
+  }
+}
+
 export default class App extends LitElement {
   static properties = {
     preset: { type: String },
@@ -43,6 +58,16 @@ export default class App extends LitElement {
     .cncOverviewContainer {
       background-color: black;
       padding: calc(var(--spacing) * 2);
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+    }
+    .cncOverviewContainer > svg {
+      width: 100%;
+      height: 100%;
+    }
+    #svg-pan-zoom-controls {
+      transform: translate(0, 0);
     }
     .centeredContainer {
       display: flex;
@@ -87,6 +112,15 @@ export default class App extends LitElement {
       bubbles: true,
       composed: true
     }));
+  }
+  updated(changedProperties) {
+    if (changedProperties.has('cncOverviewSvg') && !changedProperties.get('cncOverviewSvg') && this.cncOverviewSvg) {
+      const svg = this.shadowRoot.querySelector('.cncOverviewContainer > svg');
+      svgPanZoom(svg, {
+        beforePan,
+        controlIconsEnabled: true
+      });
+    }
   }
   render() {
     return html`

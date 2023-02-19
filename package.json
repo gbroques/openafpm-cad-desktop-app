@@ -16,7 +16,8 @@
     "express": "^4.18.2",
     "lit": "^2.5.0",
     "openafpm-cad-visualization": "git+https://github.com/gbroques/openafpm-cad-visualization.git#260f327c5dca0b92de1756bc1e7d550eefc797d6",
-    "portfinder": "^1.0.32"
+    "portfinder": "^1.0.32",
+    "svg-pan-zoom": "^3.6.1"
   },
   "devDependencies": {
     "electron": "^22.0.0",
