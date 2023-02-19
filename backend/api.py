@@ -94,10 +94,10 @@ def create_request_handler(operations_by_method_and_path: Dict[str, Callable], d
                     request_body = self.get_request_body()
 
                     def execute(queue: Queue):
+                        date_time = self.log_date_time_string()
+                        sys.stderr.write(
+                            f'{date_time} [PID {os.getpid()}] [PPID {os.getppid()}] {operation.__name__}\n')
                         try:
-                            date_time = self.log_date_time_string()
-                            sys.stderr.write(
-                                f'{date_time} [PID {os.getpid()}] [PPID {os.getppid()}] {operation.__name__}\n')
                             request = {
                                 'body': request_body,
                                 'path': path_variables_by_name
