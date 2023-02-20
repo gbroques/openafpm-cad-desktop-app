@@ -13,6 +13,7 @@ Where port defaults to 8000.
 import itertools
 import json
 import os
+import re
 import sys
 import threading
 import traceback
@@ -21,10 +22,10 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from inspect import signature
-from multiprocessing import Pool, Process, Queue
+from multiprocessing import Pipe, Pool, Process
+from multiprocessing.connection import Connection
 from pathlib import Path
 from socketserver import ThreadingMixIn
-import re
 from typing import Callable, Dict, List, Optional, Union
 
 # Add FreeCAD lib directory to sys.path for importing FreeCAD.
@@ -93,7 +94,7 @@ def create_request_handler(operations_by_method_and_path: Dict[str, Callable], d
                 if method == self.command and path_matches:
                     request_body = self.get_request_body()
 
-                    def execute(queue: Queue):
+                    def execute(connection: Connection) -> None:
                         date_time = self.log_date_time_string()
                         sys.stderr.write(
                             f'{date_time} [PID {os.getpid()}] [PPID {os.getppid()}] {operation.__name__}\n')
@@ -108,12 +109,13 @@ def create_request_handler(operations_by_method_and_path: Dict[str, Callable], d
                             sys.stderr.write(traceback.format_exc() + '\n')
                             value = exception
                             has_exception = True
-                        queue.put(
+                        connection.send(
                             {'value': value, 'has_exception': has_exception})
-                    queue = Queue()
-                    process = Process(target=execute, args=(queue,))
+                        connection.close()
+                    parent_connection, child_connection = Pipe(duplex=False)
+                    process = Process(target=execute, args=(child_connection,))
                     process.start()
-                    result = queue.get()
+                    result = parent_connection.recv()
                     process.join()
                     if result['has_exception']:
                         http_status = HTTPStatus.INTERNAL_SERVER_ERROR
