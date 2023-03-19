@@ -318,6 +318,21 @@ def handle_create_dxf_archive(request: dict) -> bytes:
                          furling_parameters)
 
 
+@api.post('/api/getdimensiontables')
+def handle_get_dimension_tables(request: dict) -> dict:
+    import FreeCAD
+    from openafpm_cad_core.app import get_dimension_tables
+    parameters = request['body']
+    magnafpm_parameters = parameters['magnafpm']
+    user_parameters = parameters['user']
+    furling_parameters = parameters['furling']
+
+    tables = get_dimension_tables(magnafpm_parameters,
+                                  user_parameters,
+                                  furling_parameters)
+    return {'tables': tables}
+
+
 if __name__ == '__main__':
     port = 8000 if len(sys.argv) == 1 else int(sys.argv[1])
     print('Server listening for requests on port ' + str(port))

@@ -11,6 +11,7 @@ import "./navigationRailButton.js";
 import "./tab.js";
 import "./tabPanel.js";
 import "./tabs.js";
+import "./typography.js";
 
 export default class App extends LitElement {
   static properties = {
@@ -24,11 +25,14 @@ export default class App extends LitElement {
     tab: { type: String },
     archiveLoading: { type: Boolean },
     archiveErrorMessage: { type: String },
-    cncOverviewLoading: { type: Boolean },
-    cncOverviewErrorMessage: { type: String },
+    cncOverviewSvgLoading: { type: Boolean },
+    cncOverviewSvgErrorMessage: { type: String },
     cncOverviewSvg: { attribute: false },
     dxfArchiveLoading: { type: Boolean },
     dxfArchiveErrorMessage: { type: String },
+    dimensionTablesLoading: { type: Boolean },
+    dimensionTablesErrorMessage: { type: String },
+    dimensionTables: { attribute: false }
   };
   static styles = css`
     :host {
@@ -59,7 +63,37 @@ export default class App extends LitElement {
     .tabs {
       z-index: 10;
     }
+    /**********************************************************
+     * Table styles                                           *
+     **********************************************************/
+    .dimensionTablesContainer table {
+      border-collapse: collapse;
+    }
+    .dimensionTablesContainer > * {
+      margin-bottom: calc(var(--spacing) * 2);
+    }
+    .dimensionTablesContainer td, .dimensionTablesContainer th {
+      border: 1px solid black;
+      padding: calc(var(--spacing) / 2) var(--spacing);
+    }
+    .dimensionTablesContainer th {
+      text-align: left;
+      text-transform: uppercase;
+    }
+    .dimensionTablesContainer tfoot td {
+      border: none;
+    }
+    /**********************************************************/
   `;
+  updated(changedProperties) {
+    if (changedProperties.has('dimensionTables') && !changedProperties.get('dimensionTables') && this.dimensionTables) {
+      const container = this.shadowRoot.querySelector('.dimensionTablesContainer');
+      for (const element of this.dimensionTables) {
+        // schedule macrotask to avoid blocking main thread
+        setTimeout(() => container.append(render(element)));
+      }
+    }
+  }
   handleTabSelect(event) {
     const { selectedValue } = event.detail;
     this.dispatchEvent(new CustomEvent('select-tab', {
@@ -99,6 +133,9 @@ export default class App extends LitElement {
         </x-tab>
         <x-tab value=${Tab.CNC} ?selected=${this.tab === Tab.CNC}>
           CNC
+        </x-tab>
+        <x-tab value=${Tab.DIMENSIONS} ?selected=${this.tab === Tab.DIMENSIONS}>
+          Dimensions
         </x-tab>
       </x-tabs>
       <x-tab-panel ?visible=${this.tab === Tab.INPUTS}>
@@ -144,7 +181,7 @@ export default class App extends LitElement {
           </x-navigation-rail>
           <slot class="slot"></slot>
           <x-download-button
-          title="Download FreeCAD files"
+            title="Download FreeCAD files"
             ?disabled=${this.form === null || this.archiveLoading}
             ?loading=${this.archiveLoading}
             .errorMessage=${this.archiveErrorMessage}
@@ -154,12 +191,12 @@ export default class App extends LitElement {
       </x-tab-panel>
       <x-tab-panel ?visible=${this.tab === Tab.CNC}>
         <!-- Empty State -->
-        ${!this.cncOverviewSvg && !this.cncOverviewLoading && !this.cncOverviewErrorMessage ?
+        ${!this.cncOverviewSvg && !this.cncOverviewSvgLoading && !this.cncOverviewSvgErrorMessage ?
           html`<x-empty-state></x-empty-state>` :
           ""
         }
         <!-- Loading -->
-        ${!this.cncOverviewSvg && this.cncOverviewLoading && !this.cncOverviewErrorMessage ?
+        ${!this.cncOverviewSvg && this.cncOverviewSvgLoading && !this.cncOverviewSvgErrorMessage ?
           html`
             <div class="centeredContainer">
               <x-circular-progress size="50px"></x-circular-progress>
@@ -168,15 +205,15 @@ export default class App extends LitElement {
           ` : ""
         }
         <!-- Data -->
-        ${this.cncOverviewSvg && !this.cncOverviewLoading && !this.cncOverviewErrorMessage ?
+        ${this.cncOverviewSvg && !this.cncOverviewSvgLoading && !this.cncOverviewSvgErrorMessage ?
           html`<div class="cncOverviewContainer" .innerHTML=${this.cncOverviewSvg}></div>` :
           ""
         }
         <!-- Error -->
-        ${!this.cncOverviewSvg && !this.cncOverviewLoading && this.cncOverviewErrorMessage ?
+        ${!this.cncOverviewSvg && !this.cncOverviewSvgLoading && this.cncOverviewSvgErrorMessage ?
           html`
             <div class="centeredContainer">
-              <x-error-banner .message="${this.cncOverviewErrorMessage}" .closeable="${false}"></x-error-banner>
+              <x-error-banner .message="${this.cncOverviewSvgErrorMessage}" .closeable="${false}"></x-error-banner>
             </div>
           ` : ""
         }
@@ -188,8 +225,60 @@ export default class App extends LitElement {
           @click=${this.handleDownloadDxfArchive}>
         </x-download-button>
       </x-tab-panel>
+      <x-tab-panel ?visible=${this.tab === Tab.DIMENSIONS}>
+        <!-- Empty State -->
+        ${!this.dimensionTables && !this.dimensionTablesLoading && !this.dimensionTablesErrorMessage ?
+          html`<x-empty-state></x-empty-state>` :
+          ""
+        }
+        <!-- Loading -->
+        ${!this.dimensionTables && this.dimensionTablesLoading && !this.dimensionTablesErrorMessage ?
+          html`
+            <div class="centeredContainer">
+              <x-circular-progress size="50px"></x-circular-progress>
+              <p>Loading Dimension Tables</p>
+            </div>
+          ` : ""
+        }
+        <!-- Data -->
+        ${this.dimensionTables && !this.dimensionTablesLoading && !this.dimensionTablesErrorMessage ?
+          html`
+            <x-container>
+              <div class="dimensionTablesContainer">
+                <x-typography variant="p">
+                  All values are in millimeters.
+                </x-typography>
+              </div>
+            </x-container>
+          ` : ""
+        }
+        <!-- Error -->
+        ${!this.dimensionTables && !this.dimensionTablesLoading && this.dimensionTablesErrorMessage ?
+          html`
+            <div class="centeredContainer">
+              <x-error-banner .message="${this.dimensionTablesErrorMessage}" .closeable="${false}"></x-error-banner>
+            </div>
+          ` : ""
+        }
+      </x-tab-panel>
     `;
   }
+}
+
+function render({tagName, children, properties}) {
+  const element = document.createElement(tagName);
+  if (properties) {
+    Object.entries(properties).forEach(([propertyName, value]) => {
+      element[propertyName] = value;
+    });
+  }
+  if (children) {
+    for (const child of children) {
+      // schedule macrotask to avoid blocking main thread
+      setTimeout(() => element.append(render(child)));
+    }
+  }
+  return element;
 }
 
 customElements.define("x-app", App);

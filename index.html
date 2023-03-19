@@ -178,11 +178,14 @@
         errorMessage: '',
         archiveLoading: false,
         archiveErrorMessage: '',
-        cncOverviewLoading: false,
-        cncOverviewErrorMessage: '',
+        cncOverviewSvgLoading: false,
+        cncOverviewSvgErrorMessage: '',
         cncOverviewSvg: '',
         dxfArchiveLoading: false,
         dxfArchiveErrorMessage: '',
+        dimensionTablesLoading: false,
+        dimensionTablesErrorMessage: '',
+        dimensionTables: null
       };
       Object.assign(app, initialState);
       const setState = (nextState) => {
@@ -236,11 +239,11 @@
         });
       }
 
-      app.addEventListener("close-error", () => {
+      app.addEventListener('close-error', () => {
         setState({ errorMessage: '' });
       });
 
-      app.addEventListener("select-preset", (event) => {
+      app.addEventListener('select-preset', (event) => {
         const { selectedPreset } = event.detail;
         setState({ preset: selectedPreset });
         setForm();
@@ -266,8 +269,8 @@
         return document.documentElement.clientWidth - navigationRailWidth;
       }
       function calculateHeight() {
-        const headerHeight = document.querySelector("header").offsetHeight;
-        const tabsHeight = app.renderRoot.querySelector("x-tabs").offsetHeight;
+        const headerHeight = document.querySelector('header').offsetHeight;
+        const tabsHeight = app.renderRoot.querySelector('x-tabs').offsetHeight;
         const offsetHeight = headerHeight + tabsHeight;
         return window.innerHeight - offsetHeight;
       }
@@ -288,7 +291,7 @@
           openAfpmCadVisualization.resize(width, height);
         }
       };
-      window.addEventListener("resize", handleResize, false);
+      window.addEventListener('resize', handleResize, false);
       function handleVisualize() {
         if (cleanUp) cleanUp();
         if (app.loading) abortController.abort();
@@ -303,20 +306,26 @@
           signal: abortController.signal
         });
         if (previousBody !== body) {
-          const cncOverviewPromise = fetchJson(`/api/getcncoverview`, {
+          const options = {
             body,
             headers: {
               'Content-Type': 'application/json'
             },
             method: 'POST'
-          });
-          setState({ cncOverviewSvg: '', cncOverviewErrorMessage: '' })
+          };
+          const cncOverviewPromise = fetchJson(`/api/getcncoverview`, options);
+          setState({ cncOverviewSvg: '', cncOverviewSvgErrorMessage: '' })
           cncOverviewPromise.then(result => setState({ cncOverviewSvg: result.svg }));
-          setPromiseToState(cncOverviewPromise, 'cncOverviewLoading', 'cncOverviewErrorMessage');
+          setPromiseToState(cncOverviewPromise, 'cncOverviewSvgLoading', 'cncOverviewSvgErrorMessage');
+
+          const dimensionTablesPromise = fetchJson(`/api/getdimensiontables`, options);
+          setState({ dimensionTables: null, dimensionTablesErrorMessage: '' })
+          dimensionTablesPromise.then(result => setState({ dimensionTables: result.tables }));
+          setPromiseToState(dimensionTablesPromise, 'dimensionTablesLoading', 'dimensionTablesErrorMessage');
         }
         setPromiseToState(visualizePromise, 'loading', 'errorMessage');
 
-        visualizationRoot.innerHTML = "";
+        visualizationRoot.innerHTML = '';
         const loadObjText = () => visualizePromise.then(({objText}) => objText);
         const furlTransformsPromise = visualizePromise.then(({furlTransforms}) => furlTransforms);
         const transformsByNamePromise = furlTransformsPromise.then(furlTransforms => ({furl: furlTransforms}));
@@ -324,15 +333,15 @@
         openAfpmCadVisualization.visualize(loadObjText, app.assembly, transformsByNamePromise);
         handleResize();
         const handleMouseMove = (event) => openAfpmCadVisualization.handleMouseMove(event);
-        window.addEventListener("mousemove", handleMouseMove, false);
+        window.addEventListener('mousemove', handleMouseMove, false);
         previousBody = body;
         cleanUp = () => {
-          window.removeEventListener("mousemove", handleMouseMove);
+          window.removeEventListener('mousemove', handleMouseMove);
         };
       }
       const debouncedVisualizeHandler = debounce(handleVisualize, 200);
-      app.addEventListener("visualize", debouncedVisualizeHandler);
-      app.addEventListener("select-assembly", (event) => {
+      app.addEventListener('visualize', debouncedVisualizeHandler);
+      app.addEventListener('select-assembly', (event) => {
         const { selectedAssembly } = event.detail;
         if (app.assembly !== selectedAssembly) {
           setState({ assembly: selectedAssembly });
@@ -340,7 +349,7 @@
           if (hasClickedVisualizeButtonOnce) debouncedVisualizeHandler();
         }
       });
-      app.addEventListener("select-tab", (event) => {
+      app.addEventListener('select-tab', (event) => {
         const { selectedTab } = event.detail;
         setState({ tab: selectedTab });
         // resize as a macro-task to ensure DAT GUI
@@ -390,12 +399,12 @@
       const handleDownloadArchive = createArchiveDownloadHandler(
         '/api/archive', 'WindTurbine.zip', 'archiveLoading', 'archiveErrorMessage'
       );
-      app.addEventListener("download-archive", handleDownloadArchive);
+      app.addEventListener('download-archive', handleDownloadArchive);
 
       const handleDownloadDxfArchive = createArchiveDownloadHandler(
         '/api/dxfarchive', 'WindTurbineDXF.zip', 'dxfArchiveLoading', 'dxfArchiveErrorMessage'
       );
-      app.addEventListener("download-dxf-archive", handleDownloadDxfArchive);
+      app.addEventListener('download-dxf-archive', handleDownloadDxfArchive);
     }
 
     function flatten(object) {

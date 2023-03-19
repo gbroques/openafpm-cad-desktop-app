@@ -5,7 +5,8 @@
 const Tab = {
   INPUTS: 'Inputs',
   VISUALIZE: 'Visualize',
-  CNC: 'CNC'
+  CNC: 'CNC',
+  DIMENSIONS: 'Dimensions'
 };
 
 const Preset = {
