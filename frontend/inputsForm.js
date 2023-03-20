@@ -271,7 +271,7 @@ function SchemaInput(props) {
           type="number"
           name="${props.name}"
           min=${ifDefined(props.schema.minimum)}
-          .step=${props.schema.type === "integer" ? "1" : "any"}
+          .step=${props.schema.type === "integer" ? "1" : "0.01"}
           max=${ifDefined(props.schema.maximum)}
           .value="${props.value}"
           ?disabled=${props.disabled}
