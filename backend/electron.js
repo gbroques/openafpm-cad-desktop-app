@@ -27,14 +27,17 @@ function formatDateWithoutMilliseconds(date) {
 }
 
 class Transaction {
-  constructor() {
-    this.start = new Date();
-  }
   logStart(...args) {
-    console.log(formatDateWithoutMilliseconds(this.start), `[PID ${process.pid}]`, 'START', ...args)
+    console.info(formatDateWithoutMilliseconds(new Date()), `[PID ${process.pid}]`, 'START', ...args);
   }
-  logEnd(...args) {
-    console.log(formatDateWithoutMilliseconds(new Date()), `[PID ${process.pid}]`, 'END  ', ...args)
+  logSuccess(...args) {
+    this.logEnd('info', ...args);
+  }
+  logFailure(...args) {
+    this.logEnd('error', ...args);
+  }
+  logEnd(level, ...args) {
+    console[level](formatDateWithoutMilliseconds(new Date()), `[PID ${process.pid}]`, 'END', ...args);
   }
 }
 
@@ -44,12 +47,12 @@ function fetchIndexHtml(url) {
     const transaction = new Transaction();
     transaction.logStart('GET', url);
     const request = http.get(url, (response) => {
-      transaction.logEnd('GET', url, response.statusCode);
       if (response.statusCode !== 200) {
-        console.log('resolve !== 200')
+        transaction.logFailure('GET', url, response.statusCode);
         resolve({ type: 'error', data: response.statusCode.toString() });
         return;
       }
+      transaction.logSuccess('GET', url, response.statusCode);
       let data = ''
       response.on('data', (chunk) => {
         data += chunk;
@@ -59,7 +62,7 @@ function fetchIndexHtml(url) {
       });
     });
     request.on('error', (error) => {
-      transaction.logEnd('GET', url, error.code);
+      transaction.logFailure('GET', url, error.code);
       resolve({type: 'error', data: error});
     })
     request.end();
@@ -86,10 +89,11 @@ electronApp.on('window-all-closed', () => {
 
 function startApi(pythonPath, port) {
   const options = { cwd: __dirname, stdio: 'inherit', windowsHide: true };
+  const transaction = new Transaction();
   const childProcess = spawn(pythonPath, ['api.py', port], options);
-  childProcess.on('spawn', () => console.log('api.py spawn'));
-  childProcess.on('error', (err) => console.error('api.py error', err));
-  childProcess.on('exit', (code) => console.log('api.py exit', code));
+  childProcess.on('spawn', () => transaction.logStart('spawn', 'api.py', 'pid', childProcess.pid));
+  childProcess.on('error', (error) => transaction.logFailure('error', 'api.py', 'pid', childProcess.pid, error));
+  childProcess.on('exit', () => transaction.logFailure('exit', 'api.py', 'pid', childProcess.pid));
   return childProcess;
 }
 
