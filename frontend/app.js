@@ -17,7 +17,7 @@ export default class App extends LitElement {
   static properties = {
     preset: { type: String },
     parametersByPreset: { attribute: false },
-    parametersSchema: { attribute: false }, 
+    parametersSchemaByPreset: { attribute: false }, 
     form: { attribute: false },
     loading: { type: Boolean },
     errorMessage: { type: String },
@@ -144,7 +144,7 @@ export default class App extends LitElement {
           <x-inputs-form
             .preset=${this.preset}
             .parametersByPreset=${this.parametersByPreset}
-            .parametersSchema=${this.parametersSchema}
+            .parametersSchemaByPreset=${this.parametersSchemaByPreset}
             .form=${this.form}
             ?loading=${this.loading}
             .errorMessage=${this.errorMessage}>
@@ -246,9 +246,6 @@ export default class App extends LitElement {
           html`
             <x-container>
               <div class="dimensionTablesContainer">
-                <x-typography variant="p">
-                  All values are in millimeters.
-                </x-typography>
               </div>
             </x-container>
           ` : ""

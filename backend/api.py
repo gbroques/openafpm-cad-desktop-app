@@ -218,8 +218,19 @@ def handle_get_default_parameters() -> dict:
 @api.get('/api/parametersschema')
 def handle_get_parameters_schema() -> dict:
     import FreeCAD
-    from openafpm_cad_core.app import get_parameters_schema
-    return get_parameters_schema()
+    from openafpm_cad_core.app import (WindTurbine, get_default_parameters,
+                                       get_parameters_schema)
+    def get_parameters_schema_for_turbine(wind_turbine: WindTurbine):
+        default_parameters = get_default_parameters(wind_turbine)
+        default_rotor_disk_radius = default_parameters['magnafpm']['RotorDiskRadius']
+        return get_parameters_schema(default_rotor_disk_radius)
+    return {
+        WindTurbine.T_SHAPE.value: get_parameters_schema_for_turbine(WindTurbine.T_SHAPE),
+        WindTurbine.H_SHAPE.value: get_parameters_schema_for_turbine(WindTurbine.H_SHAPE),
+        WindTurbine.STAR_SHAPE.value: get_parameters_schema_for_turbine(WindTurbine.STAR_SHAPE),
+        WindTurbine.T_SHAPE_2F.value: get_parameters_schema_for_turbine(
+            WindTurbine.T_SHAPE_2F)
+    }
 
 
 def load_furl_transforms_from_parameters(parameters: dict) -> List[dict]:

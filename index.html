@@ -172,7 +172,7 @@
         assembly: Assembly.WIND_TURBINE,
         tab: Tab.INPUTS,
         parametersByPreset: null,
-        parametersSchema: null, 
+        parametersSchemaByPreset: null, 
         form: null,
         loading: false,
         errorMessage: '',
@@ -213,12 +213,12 @@
         const form = mapValues(parameters, value => ({value, validationMessage: ''}));
         setState({ form });
       }
-      promise.then(([parametersByPreset, parametersSchema]) => {
+      promise.then(([parametersByPreset, parametersSchemaByPreset]) => {
         const parameters = flatten(parametersByPreset[initialState.preset]);
         const form = mapValues(parameters, value => ({value, validationMessage: ''}));
         setState({
           parametersByPreset,
-          parametersSchema
+          parametersSchemaByPreset
         });
         setForm();
       })

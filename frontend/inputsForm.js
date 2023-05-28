@@ -8,7 +8,7 @@ class InputsForm extends LitElement {
   static properties = {
     preset: { type: String },
     parametersByPreset: { attribute: false },
-    parametersSchema: { attribute: false }, 
+    parametersSchemaByPreset: { attribute: false }, 
     form: { attribute: false },
     loading: { type: Boolean },
     errorMessage: { type: String }
@@ -159,12 +159,12 @@ class InputsForm extends LitElement {
     }));
   }
   getGroupParameters(groupName) {
-    const groupProperties = this.parametersSchema?.properties?.[groupName]?.properties ?? {};
+    const groupProperties = this.parametersSchemaByPreset?.[this.preset].properties[groupName].properties ?? {};
     return Object.entries(groupProperties);
   }
   render() {
     const circularProgressSize = "28px";
-    const isFormLoading = Object.keys(this.parametersSchema ?? {}).length === 0 && !this.errorMessage;
+    const isFormLoading = Object.keys(this.parametersSchemaByPreset ?? {}).length === 0 && !this.errorMessage;
     return html`
       <form @submit=${this.handleSubmit}>
         <label>
@@ -187,7 +187,7 @@ class InputsForm extends LitElement {
             ${this.loading ? html`<x-circular-progress size="${circularProgressSize}" class="circularProgress"></x-circular-progress>` : ""}
           </legend>
           <section>
-            ${this.getGroupParameters('magnafpm').map(([name, schema]) => 
+            ${this.getGroupParameters('magnafpm').map(([name, schema]) =>
               SchemaInput({
                 name,
                 schema,
@@ -271,8 +271,8 @@ function SchemaInput(props) {
           type="number"
           name="${props.name}"
           min=${ifDefined(props.schema.minimum)}
-          .step=${props.schema.type === "integer" ? "1" : "0.01"}
           max=${ifDefined(props.schema.maximum)}
+          step=${ifDefined(props.schema.multipleOf)}
           .value="${props.value}"
           ?disabled=${props.disabled}
           @input=${props.onValueChange}
