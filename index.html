@@ -327,10 +327,9 @@
 
         visualizationRoot.innerHTML = '';
         const loadObjText = () => visualizePromise.then(({objText}) => objText);
-        const furlTransformsPromise = visualizePromise.then(({furlTransforms}) => furlTransforms);
-        const transformsByNamePromise = furlTransformsPromise.then(furlTransforms => ({furl: furlTransforms}));
-        transformsByNamePromise.catch(error => error.name !== 'AbortError' && console.error(error));
-        openAfpmCadVisualization.visualize(loadObjText, app.assembly, transformsByNamePromise);
+        const furlTransformPromise = visualizePromise.then(({furlTransform}) => furlTransform);
+        furlTransformPromise.catch(error => error.name !== 'AbortError' && console.error(error));
+        openAfpmCadVisualization.visualize(loadObjText, app.assembly, furlTransformPromise);
         handleResize();
         const handleMouseMove = (event) => openAfpmCadVisualization.handleMouseMove(event);
         window.addEventListener('mousemove', handleMouseMove, false);

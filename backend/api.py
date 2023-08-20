@@ -220,6 +220,7 @@ def handle_get_parameters_schema() -> dict:
     import FreeCAD
     from openafpm_cad_core.app import (WindTurbine, get_default_parameters,
                                        get_parameters_schema)
+
     def get_parameters_schema_for_turbine(wind_turbine: WindTurbine):
         default_parameters = get_default_parameters(wind_turbine)
         default_rotor_disk_radius = default_parameters['magnafpm']['RotorDiskRadius']
@@ -233,15 +234,15 @@ def handle_get_parameters_schema() -> dict:
     }
 
 
-def load_furl_transforms_from_parameters(parameters: dict) -> List[dict]:
+def load_furl_transform_from_parameters(parameters: dict) -> List[dict]:
     import FreeCAD
-    from openafpm_cad_core.app import load_furl_transforms
+    from openafpm_cad_core.app import load_furl_transform
     magnafpm_parameters = parameters['magnafpm']
     user_parameters = parameters['user']
     furling_parameters = parameters['furling']
-    return load_furl_transforms(magnafpm_parameters,
-                                user_parameters,
-                                furling_parameters)
+    return load_furl_transform(magnafpm_parameters,
+                               user_parameters,
+                               furling_parameters)
 
 
 def visualize_from_parameters(parameters: dict, assembly) -> str:
@@ -271,18 +272,18 @@ def visualize(request: dict) -> dict:
     }[assembly_path_parameter]
     if assembly == Assembly.WIND_TURBINE:
         with Pool(processes=2) as pool:
-            furl_transforms_result = pool.apply_async(
-                load_furl_transforms_from_parameters, (parameters,))
+            furl_transform_result = pool.apply_async(
+                load_furl_transform_from_parameters, (parameters,))
             visualize_result = pool.apply_async(
                 visualize_from_parameters, (parameters, assembly))
-            furl_transforms = furl_transforms_result.get()
+            furl_transform = furl_transform_result.get()
             obj_text = visualize_result.get()
     else:
         obj_text = visualize_from_parameters(parameters, assembly)
-        furl_transforms = []
+        furl_transform = None
     return {
         'objText': obj_text,
-        'furlTransforms': furl_transforms
+        'furlTransform': furl_transform
     }
 
 
