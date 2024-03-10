@@ -4,11 +4,15 @@ A desktop application for quickly testing the integration between [openafpm-cad-
 
 ## Prerequisites
 1. Install [Node.js](https://nodejs.org/en/).
-2. Install dependencies.
+2. Install [Yarn](https://yarnpkg.com/).
 
-       npm install
+       npm install yarn -g
 
-3. Install [FreeCAD](https://github.com/FreeCAD/FreeCAD/releases/tag/0.20), [openafpm-cad-core](https://github.com/gbroques/openafpm-cad-core) module (plus dependencies), and create `.env` file.
+3. Install dependencies.
+
+       yarn install
+
+4. Install [FreeCAD](https://github.com/FreeCAD/FreeCAD/releases/tag/0.20), [openafpm-cad-core](https://github.com/gbroques/openafpm-cad-core) module (plus dependencies), and create `.env` file.
 
        ./install.sh
 
