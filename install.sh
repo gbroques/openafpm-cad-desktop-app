@@ -33,16 +33,16 @@ is_macOS()
   [ "$(uname --kernel-name)" = "Darwin" ]
 }
 
+# https://github.com/FreeCAD/FreeCAD/releases
 if is_linux; then
-  freecad_download_link='https://github.com/FreeCAD/FreeCAD/releases/download/0.20.2/FreeCAD_0.20.2-2022-12-27-conda-Linux-x86_64-py310.AppImage'
+  freecad_download_link='https://github.com/FreeCAD/FreeCAD/releases/download/0.21.2/FreeCAD-0.21.2-Linux-x86_64.AppImage'
   archive='freecad.AppImage'
 elif is_macOS; then
   echo "Error: MacOS not supported. Please contribute changes on GitHub." >&2
   exit 1
 else # Windows
-  # Use 0.20.1 instead of 0.20.2 because extracting portable 0.20.2 Windows zip errors on certain files.
-  freecad_download_link='https://github.com/FreeCAD/FreeCAD/releases/download/0.20.1/FreeCAD-0.20.1-WIN-x64-portable-1.zip'
-  archive='freecad.zip'
+  freecad_download_link='https://github.com/FreeCAD/FreeCAD/releases/download/0.21.2/FreeCAD-0.21.2-Windows-x86_64.7z'
+  archive='freecad.7z'
 fi
 
 if [ ! -f "$archive" ]; then
@@ -67,8 +67,8 @@ elif is_macOS; then
 else # Windows
   if [ ! -d "$extracted_directory" ]; then
     echo 'Extracting FreeCAD archive.'
-    validate_command_exists unzip
-    unzip $archive -d $extracted_directory
+    validate_command_exists 7z
+    7z e $archive -o $extracted_directory
   else
     echo 'FreeCAD archive already extracted.'
   fi
