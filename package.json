@@ -19,8 +19,8 @@
     "portfinder": "^1.0.32"
   },
   "devDependencies": {
-    "electron": "^22.0.0",
-    "electron-builder": "^23.6.0"
+    "electron": "^29.1.1",
+    "electron-builder": "^24.13.3"
   },
   "build": {
     "appId": "openafpm-cad-desktop-app",
