@@ -179,6 +179,7 @@ class InputsForm extends LitElement {
             <option value=${Preset.H_SHAPE} ?selected=${this.preset === Preset.H_SHAPE}>H Shape</option>
             <option value=${Preset.STAR_SHAPE} ?selected=${this.preset === Preset.STAR_SHAPE}>Star Shape</option>
             <option value=${Preset.T_SHAPE_2F} ?selected=${this.preset === Preset.T_SHAPE_2F}>T Shape 2F</option>
+            <option value=${Preset.H_SHAPE_4F} ?selected=${this.preset === Preset.H_SHAPE_4F}>H Shape 4F</option>
           </select>
         </label>
         <fieldset>

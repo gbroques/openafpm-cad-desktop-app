@@ -211,7 +211,9 @@ def handle_get_default_parameters() -> dict:
         WindTurbine.H_SHAPE.value: get_default_parameters(WindTurbine.H_SHAPE),
         WindTurbine.STAR_SHAPE.value: get_default_parameters(WindTurbine.STAR_SHAPE),
         WindTurbine.T_SHAPE_2F.value: get_default_parameters(
-            WindTurbine.T_SHAPE_2F)
+            WindTurbine.T_SHAPE_2F),
+        WindTurbine.H_SHAPE_4F.value: get_default_parameters(
+            WindTurbine.H_SHAPE_4F)
     }
 
 
@@ -230,7 +232,9 @@ def handle_get_parameters_schema() -> dict:
         WindTurbine.H_SHAPE.value: get_parameters_schema_for_turbine(WindTurbine.H_SHAPE),
         WindTurbine.STAR_SHAPE.value: get_parameters_schema_for_turbine(WindTurbine.STAR_SHAPE),
         WindTurbine.T_SHAPE_2F.value: get_parameters_schema_for_turbine(
-            WindTurbine.T_SHAPE_2F)
+            WindTurbine.T_SHAPE_2F),
+        WindTurbine.H_SHAPE_4F.value: get_parameters_schema_for_turbine(
+            WindTurbine.H_SHAPE_4F)
     }
 
 
