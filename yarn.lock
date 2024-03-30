@@ -1591,9 +1591,9 @@ once@^1.3.0, once@^1.3.1, once@^1.4.0:
   dependencies:
     wrappy "1"
 
-"openafpm-cad-visualization@git+https://github.com/gbroques/openafpm-cad-visualization.git#d7c1c585f54f7207359fff5f0551989c48ecd78f":
+"openafpm-cad-visualization@git+https://github.com/gbroques/openafpm-cad-visualization.git#d3245d902e94c9a1a1cae494dc9f152c1c609f0d":
   version "0.1.0-SNAPSHOT"
-  resolved "git+https://github.com/gbroques/openafpm-cad-visualization.git#d7c1c585f54f7207359fff5f0551989c48ecd78f"
+  resolved "git+https://github.com/gbroques/openafpm-cad-visualization.git#d3245d902e94c9a1a1cae494dc9f152c1c609f0d"
   dependencies:
     camera-controls "^1.33.1"
     cancelable-promise "^4.3.0"

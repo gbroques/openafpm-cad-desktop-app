@@ -179,6 +179,11 @@ export default class App extends LitElement {
               ?selected=${this.assembly === Assembly.COIL_WINDER}>
                 Coil Winder
             </x-navigation-rail-button>
+            <x-navigation-rail-button
+              value=${Assembly.BLADE_TEMPLATE}
+              ?selected=${this.assembly === Assembly.BLADE_TEMPLATE}>
+                Blade Template
+            </x-navigation-rail-button>
           </x-navigation-rail>
           <slot class="slot"></slot>
           <x-download-button

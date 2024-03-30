@@ -22,7 +22,8 @@ const Assembly = {
   STATOR_MOLD: 'StatorMold',
   ROTOR_MOLD: 'RotorMold',
   MAGNET_JIG: 'MagnetJig',
-  COIL_WINDER: 'CoilWinder'
+  COIL_WINDER: 'CoilWinder',
+  BLADE_TEMPLATE: 'BladeTemplate'
 };
 
 export { Tab, Preset, Assembly };

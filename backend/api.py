@@ -272,7 +272,8 @@ def visualize(request: dict) -> dict:
         'StatorMold': Assembly.STATOR_MOLD,
         'RotorMold': Assembly.ROTOR_MOLD,
         'MagnetJig': Assembly.MAGNET_JIG,
-        'CoilWinder': Assembly.COIL_WINDER
+        'CoilWinder': Assembly.COIL_WINDER,
+        'BladeTemplate': Assembly.BLADE_TEMPLATE
     }[assembly_path_parameter]
     if assembly == Assembly.WIND_TURBINE:
         with Pool(processes=2) as pool:
