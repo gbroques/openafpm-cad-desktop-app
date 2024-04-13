@@ -47,6 +47,10 @@ export default class App extends LitElement {
     .cncOverviewContainer {
       background-color: black;
       padding: calc(var(--spacing) * 2);
+      & > svg {
+        width: 100%;
+        height: 100%;
+      }
     }
     .centeredContainer {
       display: flex;
