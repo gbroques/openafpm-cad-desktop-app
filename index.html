@@ -5,9 +5,37 @@
     <meta charset="UTF-8">
     <title>OpenAFPM CAD Visualization</title>
     <style>
+      @font-face {
+        font-family: "Roboto";
+        src: url("font/Roboto-Light.ttf");
+        font-weight: 300;
+      }
+      @font-face {
+        font-family: "Roboto";
+        src: url("font/Roboto-Regular.ttf");
+        font-weight: 400;
+      }
+      @font-face {
+        font-family: "Roboto";
+        src: url("font/Roboto-Italic.ttf");
+        font-weight: 400;
+        font-style: italic;
+      }
+      @font-face {
+        font-family: "Roboto";
+        src: url("font/Roboto-Medium.ttf");
+        font-weight: 500;
+      }
+      @font-face {
+        font-family: "Roboto";
+        src: url("font/Roboto-Bold.ttf");
+        font-weight: 700;
+      }
       :root {
         --spacing: 8px;
         --transition-duration-standard: 250ms;
+        --font-family: "Roboto";
+        --root-font-size: "Roboto";
         /**
          * Typography based on modular scale factor of 1.2,
          * also known as the Minor Third.
@@ -31,6 +59,7 @@
         --background-navigation: #FFFFFF;
         --background-paper: #DCDCDC; /* gainsboro - https://www.materialui.co/htmlcolors */
         --background-disabled: rgba(0, 0, 0, 0.12);
+        --background-dropzone: #E8F5E9;
         --text-color: rgba(0, 0, 0, 0.87);
         --text-disabled: rgba(0, 0, 0, 0.38);
         --divider: rgba(0, 0, 0, 0.12);
@@ -45,12 +74,13 @@
         --background-navigation: #303030;
         --background-paper: #424242;
         --background-disabled: rgba(255, 255, 255, 0.12);
+        --background-dropzone: #111;
         --text-color: #FFFFFF;
         --text-disabled: rgba(255, 255, 255, 0.5);
         --divider: rgba(255, 255, 255, 0.12);
       }
       html {
-        font-size: 16px;
+        font-size: var(--root-font-size);
         overflow-y: scroll;
       }
       body {
@@ -58,7 +88,7 @@
         background: var(--background-default);
         transition: var(--transition-duration-standard) ease-in-out;
         margin: 0;
-        font-family: sans-serif;
+        font-family: var(--font-family);
         display: grid;
         grid-template-rows: min-content 1fr;
       }
@@ -101,6 +131,9 @@
       }
       @-webkit-keyframes spin {
         to { transform: rotate(360deg); }
+      }
+      .dropzone {
+        background: var(--background-dropzone);
       }
     </style>
 </head>
@@ -160,12 +193,15 @@
         "./node_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js"
       );
       const enumsPromise = import("./frontend/enums.js");
-      Promise.all([openAfpmCadVisualizationPromise, enumsPromise])
+      const groupParametersPromise = import("./frontend/groupParameters.js");
+      Promise.all([openAfpmCadVisualizationPromise, enumsPromise, groupParametersPromise])
         .then(setup);
     }
-    function setup([{default: OpenAfpmCadVisualization}, enums]) {
+    function setup([{default: OpenAfpmCadVisualization}, enums, {default: groupParameters}]) {
       const { Tab, Preset, Assembly } = enums;
       const app = document.querySelector("x-app");
+
+      const buildRequestBody = (form, parameters) => JSON.stringify(groupParameters(form, parameters));
 
       const initialState = {
         preset: Preset.T_SHAPE,
@@ -355,6 +391,52 @@
         // is visible before setting its top position.
         setTimeout(handleResize);
       });
+
+      /**
+       * Import
+       * --------------------------------------------------------------------------------------------------------------*/
+      const handleDragOver = event => {
+        event.preventDefault();
+        if (!document.body.classList.contains('dropzone')) {
+          document.body.classList.add('dropzone');
+        }
+      };
+      const handleRemoveDropzoneClass = event => {
+        if (document.body.classList.contains('dropzone')) {
+          document.body.classList.remove('dropzone');
+        }
+      };
+      const handleDrop = event => {
+        event.preventDefault();
+        handleRemoveDropzoneClass(event);
+        const firstItem = event.dataTransfer.items?.[0];
+        if (firstItem?.kind === 'file') {
+          const file = firstItem.getAsFile();
+          if (file.type === 'application/json') {
+            const reader = new FileReader();
+            reader.onload = (loadEvent) =>  {
+              try {
+                // TODO: We should validate this user input instead of trusting it.
+                const {preset, ...parametersByGroup} = JSON.parse(loadEvent.target.result);
+                const parameters = flatten(parametersByGroup);
+                const form = mapValues(parameters, value => ({value, validationMessage: ''}));
+                setState({ form });
+                if (preset) setState({ preset });
+              } catch (error) {
+                console.error(error);
+              }
+            };
+            reader.readAsText(file); 
+          } else {
+            console.warn(`Type of '${file.name}' must be 'application/json' instead of '${file.type}'.`);
+          }
+        }
+      }
+      document.body.addEventListener('dragover', handleDragOver);
+      document.body.addEventListener('dragleave', handleRemoveDropzoneClass);
+      document.body.addEventListener('drop', handleDrop);
+      /** ------------------------------------------------------------------------------------------------------------ */
+
       function createArchiveDownloadHandler(requestPath, archiveName, loadingProperty, errorMessageProperty) {
         return () => {
           if (app[loadingProperty]) return;
@@ -419,44 +501,6 @@
       return mapEntries(obj, ([key, value]) => (
         [key, valueMapper(value)]
       ));
-    }
-
-    function buildRequestBody(form, parameters) {
-      const valueByKey = mapValues(form, ({ value }) => value);
-      const groupByKey = flattenToGroupByKey(parameters);
-      const valueTransformer = value => isNaN(value) ? value : parseFloat(value);
-      const parameterByGroup = createdNestedObject(valueByKey,
-        key => groupByKey[key],
-        valueTransformer);
-      return JSON.stringify(parameterByGroup);
-    }
-
-    function flattenToGroupByKey(parameters) {
-      const entries = Object.entries(parameters);
-      return entries.reduce((acc, entry) => {
-        const [group, valueByKey] = entry;
-        const keys = Object.keys(valueByKey);
-        const groupByKey = keys.reduce((obj, key) => {
-          return {...obj, [key]: group};
-        }, {});
-        return {...acc, ...groupByKey};
-      }, {});
-    }
-
-    function createdNestedObject(object, groupGetter, valueTransformer) {
-      const entries = Object.entries(object);
-      return entries.reduce((acc, entry) => {
-        const [key, value] = entry;
-        const group = groupGetter(key);
-        if (group === undefined) {
-          return acc;
-        }
-        if (acc[group] === undefined) {
-          acc[group] = {};
-        }
-        acc[group][key] = valueTransformer(value);
-        return acc;
-      }, {});
     }
 
     function debounce(callback, wait) {

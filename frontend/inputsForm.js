@@ -1,7 +1,9 @@
 import { LitElement, html, css } from "lit";
 import { ifDefined } from 'lit-html/directives/if-defined.js';
 import { Preset } from "./enums.js";
+import groupParameters from "./groupParameters.js";
 
+import "./button.js";
 import "./circularProgress.js";
 
 class InputsForm extends LitElement {
@@ -21,6 +23,11 @@ class InputsForm extends LitElement {
       display: flex;
       flex-direction: column;
       gap: calc(var(--spacing) * 2);
+    }
+    .form-controls-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     fieldset {
       display: flex;
@@ -48,7 +55,6 @@ class InputsForm extends LitElement {
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     }
     label {
-      flex: 1;
       font-weight: bold;
     }
     section input, section select {
@@ -162,26 +168,36 @@ class InputsForm extends LitElement {
     const groupProperties = this.parametersSchemaByPreset?.[this.preset].properties[groupName].properties ?? {};
     return Object.entries(groupProperties);
   }
+  handleExport() {
+    if (this.parametersByPreset?.[this.preset]) {
+      const parametersByGroup = groupParameters(this.form, this.parametersByPreset[this.preset]);
+      const parametersByGroupWithPreset = {preset: this.preset, ...parametersByGroup};
+      download(JSON.stringify(parametersByGroupWithPreset, null, 2), 'application/json', this.preset + '.json');
+    }
+  }
   render() {
     const circularProgressSize = "28px";
     const isFormLoading = Object.keys(this.parametersSchemaByPreset ?? {}).length === 0 && !this.errorMessage;
     return html`
       <form @submit=${this.handleSubmit}>
-        <label>
-          Preset
-          <select
-            name="Preset"
-            @change=${this.handlePresetSelect}
-            ?disabled=${isFormLoading}
-            class="presetSelect"
-          >
-            <option value=${Preset.T_SHAPE} ?selected=${this.preset === Preset.T_SHAPE}>T Shape</option>
-            <option value=${Preset.H_SHAPE} ?selected=${this.preset === Preset.H_SHAPE}>H Shape</option>
-            <option value=${Preset.STAR_SHAPE} ?selected=${this.preset === Preset.STAR_SHAPE}>Star Shape</option>
-            <option value=${Preset.T_SHAPE_2F} ?selected=${this.preset === Preset.T_SHAPE_2F}>T Shape 2F</option>
-            <option value=${Preset.H_SHAPE_4F} ?selected=${this.preset === Preset.H_SHAPE_4F}>H Shape 4F</option>
-          </select>
-        </label>
+        <div class="form-controls-container">
+          <label>
+            Preset
+            <select
+              name="Preset"
+              @change=${this.handlePresetSelect}
+              ?disabled=${isFormLoading}
+              class="presetSelect"
+            >
+              <option value=${Preset.T_SHAPE} ?selected=${this.preset === Preset.T_SHAPE}>T Shape</option>
+              <option value=${Preset.H_SHAPE} ?selected=${this.preset === Preset.H_SHAPE}>H Shape</option>
+              <option value=${Preset.STAR_SHAPE} ?selected=${this.preset === Preset.STAR_SHAPE}>Star Shape</option>
+              <option value=${Preset.T_SHAPE_2F} ?selected=${this.preset === Preset.T_SHAPE_2F}>T Shape 2F</option>
+              <option value=${Preset.H_SHAPE_4F} ?selected=${this.preset === Preset.H_SHAPE_4F}>H Shape 4F</option>
+            </select>
+          </label>
+          <x-button @click=${this.handleExport} variant="secondary">Export</x-button>
+        </div>
         <fieldset>
           <legend>
             MagnAFPM
@@ -282,6 +298,15 @@ function SchemaInput(props) {
         <p class="validationMessage">${props.validationMessage}</p>
     </label>
   `;
+}
+
+function download(content, mimeType, filename) {
+  const a = document.createElement('a');
+  const blob = new Blob([content], {type: mimeType});
+  const url = URL.createObjectURL(blob);
+  a.setAttribute('href', url);
+  a.setAttribute('download', filename);
+  a.click();
 }
 
 customElements.define("x-inputs-form", InputsForm);
