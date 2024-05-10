@@ -187,7 +187,6 @@ class InputsForm extends LitElement {
             <select
               name="Preset"
               @change=${this.handlePresetSelect}
-              ?disabled=${isFormLoading}
               class="presetSelect"
             >
               <option value=${Preset.T_SHAPE} ?selected=${this.preset === Preset.T_SHAPE}>T Shape</option>

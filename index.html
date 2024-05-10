@@ -358,6 +358,7 @@
       const promise = Promise.all([defaultParametersPromise, parametersSchemaPromise]);
 
       function setForm() {
+        if (!app.parametersByPreset) return;
         const parameters = flatten(app.parametersByPreset[app.preset]);
         const form = mapValues(parameters, value => ({value, validationMessage: ''}));
         setState({ form });
