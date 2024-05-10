@@ -114,6 +114,14 @@
     lodash "^4.17.15"
     tmp-promise "^3.0.2"
 
+"@material/web@^1.4.1":
+  version "1.4.1"
+  resolved "https://registry.yarnpkg.com/@material/web/-/web-1.4.1.tgz#116480759d0b5815ea181086d32cc3ccb54a30f6"
+  integrity sha512-17MZA6Bt7ie6uDc5cVEGtm6frQfm7ASLGVJhJuYJ0W2Fs7Zogd8wJ3ExoYU8jyzv8LEXcfvnZKcvr8dlquGsig==
+  dependencies:
+    lit "^2.7.4 || ^3.0.0"
+    tslib "^2.4.0"
+
 "@pkgjs/parseargs@^0.11.0":
   version "0.11.0"
   resolved "https://registry.npmjs.org/@pkgjs/parseargs/-/parseargs-0.11.0.tgz"
@@ -1389,7 +1397,7 @@ lit-html@^3.1.2:
   dependencies:
     "@types/trusted-types" "^2.0.2"
 
-lit@^3.1.3:
+"lit@^2.7.4 || ^3.0.0", lit@^3.1.3:
   version "3.1.3"
   resolved "https://registry.npmjs.org/lit/-/lit-3.1.3.tgz"
   integrity sha512-l4slfspEsnCcHVRTvaP7YnkTZEZggNFywLEIhQaGhYDczG+tu/vlgm/KaWIEjIp+ZyV20r2JnZctMb8LeLCG7Q==
@@ -2041,6 +2049,11 @@ truncate-utf8-bytes@^1.0.0:
   integrity sha512-95Pu1QXQvruGEhv62XCMO3Mm90GscOCClvrIUwCM0PYOXK3kaF3l3sIHxx71ThJfcbM2O5Au6SO3AWCSEfW4mQ==
   dependencies:
     utf8-byte-length "^1.0.1"
+
+tslib@^2.4.0:
+  version "2.6.2"
+  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.6.2.tgz#703ac29425e7b37cd6fd456e92404d46d1f3e4ae"
+  integrity sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==
 
 type-fest@^0.13.1:
   version "0.13.1"

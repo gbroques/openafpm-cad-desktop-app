@@ -3,6 +3,7 @@ import { ifDefined } from 'lit-html/directives/if-defined.js';
 import { Preset } from "./enums.js";
 import groupParameters from "./groupParameters.js";
 
+import "@material/web/button/text-button.js";
 import "./button.js";
 import "./circularProgress.js";
 
@@ -196,7 +197,11 @@ class InputsForm extends LitElement {
               <option value=${Preset.H_SHAPE_4F} ?selected=${this.preset === Preset.H_SHAPE_4F}>H Shape 4F</option>
             </select>
           </label>
-          <x-button @click=${this.handleExport} variant="secondary">Export</x-button>
+          <md-text-button type="button" @click=${this.handleExport}>
+            Export
+            <!-- file_upload material icon -->
+            <svg slot="icon" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+          </md-text-button>
         </div>
         <fieldset>
           <legend>
