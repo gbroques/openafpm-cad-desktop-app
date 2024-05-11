@@ -30,6 +30,7 @@ class DownloadButton extends LitElement {
   render() {
     return html`
       <md-fab 
+        variant="primary"
         class=${this.errorMessage ? 'error' : ''}
         .title=${this.loading ? "Loading..." : this.errorMessage ? this.errorMessage : this.title}>
         <md-icon slot="icon">
