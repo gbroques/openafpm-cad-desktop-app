@@ -553,8 +553,8 @@
 
       function createArchiveDownloadHandler(requestPath, archiveName, loadingProperty, errorMessageProperty) {
         return () => {
-          if (app[loadingProperty]) return;
-          setState({ [loadingProperty]: true });
+          if (!app.form || app[loadingProperty]) return;
+          setState({ [loadingProperty]: true, [errorMessageProperty]: '' });
           fetch(requestPath, {
             body: buildRequestBody(app.form, app.parametersByPreset[app.preset]),
             headers: {

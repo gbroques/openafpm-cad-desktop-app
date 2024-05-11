@@ -4,7 +4,6 @@ import { Preset } from "./enums.js";
 import groupParameters from "./groupParameters.js";
 
 import "@material/web/button/text-button.js";
-import "./button.js";
 import "./circularProgress.js";
 
 class InputsForm extends LitElement {
@@ -86,7 +85,6 @@ class InputsForm extends LitElement {
     input:invalid {
       outline: 1px solid var(--validation-color-main);
     }
-    /* duplicate x-button styles since web components don't work nicely with forms */
     button[type="submit"] {
       /* base button styles */
       border: none;

@@ -192,7 +192,6 @@ export default class App extends LitElement {
           <slot class="slot"></slot>
           <x-download-button
             title="Download FreeCAD files"
-            ?disabled=${this.form === null || this.archiveLoading}
             ?loading=${this.archiveLoading}
             .errorMessage=${this.archiveErrorMessage}
             @click=${this.handleDownloadArchive}>
@@ -229,7 +228,6 @@ export default class App extends LitElement {
         }
         <x-download-button
           title="Download DXF files"
-          ?disabled=${this.form === null || this.dxfArchiveLoading}
           ?loading=${this.dxfArchiveLoading}
           .errorMessage=${this.dxfArchiveErrorMessage}
           @click=${this.handleDownloadDxfArchive}>
