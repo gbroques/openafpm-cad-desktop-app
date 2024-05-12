@@ -1,5 +1,6 @@
 import { LitElement, html, css } from "lit";
 
+import "@material/web/ripple/ripple.js"
 import "./typography.js";
 import "./windTurbineIcon.js";
 
@@ -20,6 +21,7 @@ class NavigationRailButton extends LitElement {
       padding: calc(var(--spacing) * 1);
       color: var(--text-color);
       transition: all var(--transition-duration-standard) ease-in-out;
+      position: relative; /* for ripple */
     }
     :host([selected]) > .button {
       font-size: 1rem;
@@ -28,7 +30,10 @@ class NavigationRailButton extends LitElement {
   `;
   render() {
     return html`
-      <button class="button"><slot></slot></button>
+      <button class="button">
+        <md-ripple></md-ripple>
+        <slot></slot>
+      </button>
     `;
   }
 }
