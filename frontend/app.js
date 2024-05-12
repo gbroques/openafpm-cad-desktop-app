@@ -1,5 +1,8 @@
 import { LitElement, html, css } from "lit";
 import { Tab, Assembly } from "./enums.js";
+
+import "@material/web/tabs/primary-tab.js";
+import "@material/web/tabs/tabs.js";
 import "./container.js";
 import "./downloadButton.js";
 import "./emptyState.js";
@@ -8,10 +11,10 @@ import "./header.js"
 import "./inputsForm.js";
 import "./navigationRail.js";
 import "./navigationRailButton.js";
-import "./tab.js";
 import "./tabPanel.js";
-import "./tabs.js";
 import "./typography.js";
+
+const TABS = [Tab.INPUTS, Tab.VISUALIZE, Tab.CNC, Tab.DIMENSIONS];
 
 export default class App extends LitElement {
   static properties = {
@@ -99,10 +102,10 @@ export default class App extends LitElement {
       }
     }
   }
-  handleTabSelect(event) {
-    const { selectedValue } = event.detail;
+  handleTabChange(event) {
+    const selectedTab = TABS[event.target.activeTabIndex];
     this.dispatchEvent(new CustomEvent('select-tab', {
-      detail: { selectedTab: selectedValue },
+      detail: { selectedTab },
       bubbles: true,
       composed: true
     }));
@@ -129,20 +132,13 @@ export default class App extends LitElement {
   }
   render() {
     return html`
-      <x-tabs class="tabs" @select=${this.handleTabSelect}>
-        <x-tab value=${Tab.INPUTS} ?selected=${this.tab === Tab.INPUTS}>
-          Inputs
-        </x-tab>
-        <x-tab value=${Tab.VISUALIZE} ?selected=${this.tab === Tab.VISUALIZE}>
-          Visualize
-        </x-tab>
-        <x-tab value=${Tab.CNC} ?selected=${this.tab === Tab.CNC}>
-          CNC
-        </x-tab>
-        <x-tab value=${Tab.DIMENSIONS} ?selected=${this.tab === Tab.DIMENSIONS}>
-          Dimensions
-        </x-tab>
-      </x-tabs>
+      <md-tabs class="tabs" @change=${this.handleTabChange}>
+        ${TABS.map(tab => html`
+          <md-primary-tab ?selected=${this.tab === tab}>
+            ${tab}
+          </md-primary-tab>
+        `)}
+      </md-tabs>
       <x-tab-panel ?visible=${this.tab === Tab.INPUTS}>
         <x-container>
           <x-inputs-form
