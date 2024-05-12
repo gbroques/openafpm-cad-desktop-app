@@ -68,6 +68,8 @@ export default class App extends LitElement {
       width: calc(100% - var(--navigation-rail-width));
     }
     .tabs {
+      position: sticky;
+      top: 0;
       z-index: 10;
     }
     /**********************************************************
