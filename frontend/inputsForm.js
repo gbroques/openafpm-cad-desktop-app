@@ -55,7 +55,7 @@ class InputsForm extends LitElement {
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     }
     label {
-      font-weight: bold;
+      font-weight: 500;
     }
     section input, section select {
       width: 100%;
