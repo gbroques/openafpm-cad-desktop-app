@@ -205,37 +205,25 @@ api = Api()
 @api.get('/api/defaultparameters')
 def handle_get_default_parameters() -> dict:
     import FreeCAD
-    from openafpm_cad_core.app import WindTurbine, get_default_parameters
-    return {
-        WindTurbine.T_SHAPE.value: get_default_parameters(WindTurbine.T_SHAPE),
-        WindTurbine.H_SHAPE.value: get_default_parameters(WindTurbine.H_SHAPE),
-        WindTurbine.STAR_SHAPE.value: get_default_parameters(WindTurbine.STAR_SHAPE),
-        WindTurbine.T_SHAPE_2F.value: get_default_parameters(
-            WindTurbine.T_SHAPE_2F),
-        WindTurbine.H_SHAPE_4F.value: get_default_parameters(
-            WindTurbine.H_SHAPE_4F)
-    }
+    from openafpm_cad_core.app import get_default_parameters, get_presets
+    first_five_presets = get_presets()[:5]
+    first_five_default_parameters = [get_default_parameters(p) for p in first_five_presets]
+    return {k: v for (k, v) in zip(first_five_presets, first_five_default_parameters)}
 
 
 @api.get('/api/parametersschema')
 def handle_get_parameters_schema() -> dict:
     import FreeCAD
-    from openafpm_cad_core.app import (WindTurbine, get_default_parameters,
-                                       get_parameters_schema)
+    from openafpm_cad_core.app import (get_default_parameters,
+                                       get_parameters_schema, get_presets)
 
-    def get_parameters_schema_for_turbine(wind_turbine: WindTurbine):
-        default_parameters = get_default_parameters(wind_turbine)
+    def get_parameters_schema_for_preset(preset: str):
+        default_parameters = get_default_parameters(preset)
         default_rotor_disk_radius = default_parameters['magnafpm']['RotorDiskRadius']
         return get_parameters_schema(default_rotor_disk_radius)
-    return {
-        WindTurbine.T_SHAPE.value: get_parameters_schema_for_turbine(WindTurbine.T_SHAPE),
-        WindTurbine.H_SHAPE.value: get_parameters_schema_for_turbine(WindTurbine.H_SHAPE),
-        WindTurbine.STAR_SHAPE.value: get_parameters_schema_for_turbine(WindTurbine.STAR_SHAPE),
-        WindTurbine.T_SHAPE_2F.value: get_parameters_schema_for_turbine(
-            WindTurbine.T_SHAPE_2F),
-        WindTurbine.H_SHAPE_4F.value: get_parameters_schema_for_turbine(
-            WindTurbine.H_SHAPE_4F)
-    }
+    first_five_presets = get_presets()[:5]
+    first_five_parameter_schemas = [get_parameters_schema_for_preset(p) for p in first_five_presets]
+    return {k: v for (k, v) in zip(first_five_presets, first_five_parameter_schemas)}
 
 
 def load_furl_transform_from_parameters(parameters: dict) -> List[dict]:
