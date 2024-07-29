@@ -205,6 +205,7 @@ api = Api()
 @api.get('/api/defaultparameters')
 def handle_get_default_parameters() -> dict:
     import FreeCAD
+
     from openafpm_cad_core.app import get_default_parameters, get_presets
     first_five_presets = get_presets()[:5]
     first_five_default_parameters = [get_default_parameters(p) for p in first_five_presets]
@@ -214,6 +215,7 @@ def handle_get_default_parameters() -> dict:
 @api.get('/api/parametersschema')
 def handle_get_parameters_schema() -> dict:
     import FreeCAD
+
     from openafpm_cad_core.app import (get_default_parameters,
                                        get_parameters_schema, get_presets)
 
@@ -228,6 +230,7 @@ def handle_get_parameters_schema() -> dict:
 
 def load_furl_transform_from_parameters(parameters: dict) -> List[dict]:
     import FreeCAD
+
     from openafpm_cad_core.app import load_furl_transform
     magnafpm_parameters = parameters['magnafpm']
     user_parameters = parameters['user']
@@ -252,6 +255,7 @@ def visualize_from_parameters(parameters: dict, assembly) -> str:
 @api.post('/api/visualize/<assembly>')
 def visualize(request: dict) -> dict:
     import FreeCAD
+
     from openafpm_cad_core.app import Assembly
     parameters = request['body']
     assembly_path_parameter = request['path']['assembly']
@@ -283,6 +287,7 @@ def visualize(request: dict) -> dict:
 @api.post('/api/archive')
 def handle_create_archive(request: dict) -> bytes:
     import FreeCAD
+
     from openafpm_cad_core.app import create_archive
     parameters = request['body']
     magnafpm_parameters = parameters['magnafpm']
@@ -297,6 +302,7 @@ def handle_create_archive(request: dict) -> bytes:
 @api.post('/api/getcncoverview')
 def get_cnc_overview(request: dict) -> dict:
     import FreeCAD
+
     from openafpm_cad_core.app import preview_dxf_as_svg
     parameters = request['body']
     magnafpm_parameters = parameters['magnafpm']
@@ -312,6 +318,7 @@ def get_cnc_overview(request: dict) -> dict:
 @api.post('/api/dxfarchive')
 def handle_create_dxf_archive(request: dict) -> bytes:
     import FreeCAD
+
     from openafpm_cad_core.app import export_to_dxf
     parameters = request['body']
     magnafpm_parameters = parameters['magnafpm']
@@ -326,6 +333,7 @@ def handle_create_dxf_archive(request: dict) -> bytes:
 @api.post('/api/getdimensiontables')
 def handle_get_dimension_tables(request: dict) -> dict:
     import FreeCAD
+
     from openafpm_cad_core.app import get_dimension_tables
     parameters = request['body']
     magnafpm_parameters = parameters['magnafpm']
