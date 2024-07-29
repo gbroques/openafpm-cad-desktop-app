@@ -520,50 +520,55 @@
           document.body.classList.remove('dropzone');
         }
       };
+
+      const handleFileUpload = file => {
+        if (file.type === 'application/json') {
+          const reader = new FileReader();
+          reader.onload = (loadEvent) =>  {
+            try {
+              // TODO: We should validate this user input instead of trusting it.
+              const {preset, ...parametersByGroup} = JSON.parse(loadEvent.target.result);
+              const parameters = flatten(parametersByGroup);
+              const form = mapValues(parameters, value => ({value, validationMessage: ''}));
+              setState({ form });
+              if (preset) setState({ preset });
+            } catch (error) {
+              console.error(error);
+            }
+          };
+          reader.readAsText(file); 
+        } else if (file.path.endsWith('.mat')) {
+          const loadmatPromise = fetchJson('/api/loadmat', {
+            body: JSON.stringify({path: file.path}),
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            method: 'POST',
+          });
+          loadmatPromise.then(({preset, ...parametersByGroup}) => {
+            const parameters = flatten(parametersByGroup);
+            const form = mapValues(parameters, value => ({value, validationMessage: ''}));
+            setState({ form: {...app.form, ...form} });
+            if (preset) setState({ preset });
+          });
+          loadmatPromise.catch(console.error);
+        } else {
+          console.warn(`Type of '${file.name}' must be 'application/json' instead of '${file.type}' or name must end with '.mat' extension.`);
+        }
+      };
       const handleDrop = event => {
         event.preventDefault();
         handleRemoveDropzoneClass(event);
-        const firstItem = event.dataTransfer.items?.[0];
-        if (firstItem?.kind === 'file') {
-          const file = firstItem.getAsFile();
-          if (file.type === 'application/json') {
-            const reader = new FileReader();
-            reader.onload = (loadEvent) =>  {
-              try {
-                // TODO: We should validate this user input instead of trusting it.
-                const {preset, ...parametersByGroup} = JSON.parse(loadEvent.target.result);
-                const parameters = flatten(parametersByGroup);
-                const form = mapValues(parameters, value => ({value, validationMessage: ''}));
-                setState({ form });
-                if (preset) setState({ preset });
-              } catch (error) {
-                console.error(error);
-              }
-            };
-            reader.readAsText(file); 
-          } else if (file.path.endsWith('.mat')) {
-            const loadmatPromise = fetchJson('/api/loadmat', {
-              body: JSON.stringify({path: file.path}),
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              method: 'POST',
-            });
-            loadmatPromise.then(({preset, ...parametersByGroup}) => {
-              const parameters = flatten(parametersByGroup);
-              const form = mapValues(parameters, value => ({value, validationMessage: ''}));
-              setState({ form: {...app.form, ...form} });
-              if (preset) setState({ preset });
-            });
-            loadmatPromise.catch(console.error);
-          } else {
-            console.warn(`Type of '${file.name}' must be 'application/json' instead of '${file.type}' or name must end with '.mat' extension.`);
-          }
-        }
+        const firstFile = event.dataTransfer.items?.[0];
+        handleFileUpload(firstFile);
       }
       document.body.addEventListener('dragover', handleDragOver);
       document.body.addEventListener('dragleave', handleRemoveDropzoneClass);
       document.body.addEventListener('drop', handleDrop);
+
+      app.addEventListener('file-upload', (event) => {
+        handleFileUpload(event.detail.file);
+      });
       /** ------------------------------------------------------------------------------------------------------------ */
 
       function createArchiveDownloadHandler(requestPath, archiveName, loadingProperty, errorMessageProperty) {

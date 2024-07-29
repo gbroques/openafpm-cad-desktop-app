@@ -132,6 +132,9 @@ class InputsForm extends LitElement {
       margin-left: calc(var(--spacing) * 1.5);
       position: absolute;
     }
+    .importButton {
+      margin-right: calc(var(--spacing) * 1);
+    }
   `;
   handlePresetSelect(event) {
     const selectedPreset = event.target.value;
@@ -167,6 +170,18 @@ class InputsForm extends LitElement {
     const groupProperties = this.parametersSchemaByPreset?.[this.preset].properties[groupName].properties ?? {};
     return Object.entries(groupProperties);
   }
+  handleImport(event) {
+    this.renderRoot.querySelector('#file-upload').click();
+    event.preventDefault();
+  }
+  handleFileUploadChange(event) {
+    const firstFile = event.target.files[0];
+    this.dispatchEvent(new CustomEvent('file-upload', {
+      detail: {file: firstFile},
+      bubbles: true,
+      composed: true
+    }));
+  }
   handleExport() {
     if (this.parametersByPreset?.[this.preset]) {
       const parametersByGroup = groupParameters(this.form, this.parametersByPreset[this.preset]);
@@ -194,11 +209,19 @@ class InputsForm extends LitElement {
               <option value=${Preset.H_SHAPE_4F} ?selected=${this.preset === Preset.H_SHAPE_4F}>H Shape 4F</option>
             </select>
           </label>
-          <md-text-button type="button" @click=${this.handleExport}>
-            Export
-            <!-- file_upload material icon -->
-            <svg slot="icon" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
-          </md-text-button>
+          <div>
+            <input id="file-upload" type="file" accept="application/json,.mat" hidden @change=${this.handleFileUploadChange} />
+            <md-text-button class="importButton" @click=${this.handleImport} title="Import JSON or .mat files">
+              Import
+              <!-- file_download material icon -->
+              <svg slot="icon" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            </md-text-button>
+            <md-text-button type="button" @click=${this.handleExport}>
+              Export
+              <!-- file_upload material icon -->
+              <svg slot="icon" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+            </md-text-button>
+          </div>
         </div>
         <fieldset>
           <legend>
