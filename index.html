@@ -541,8 +541,23 @@
               }
             };
             reader.readAsText(file); 
+          } else if (file.path.endsWith('.mat')) {
+            const loadmatPromise = fetchJson('/api/loadmat', {
+              body: JSON.stringify({path: file.path}),
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              method: 'POST',
+            });
+            loadmatPromise.then(({preset, ...parametersByGroup}) => {
+              const parameters = flatten(parametersByGroup);
+              const form = mapValues(parameters, value => ({value, validationMessage: ''}));
+              setState({ form: {...app.form, ...form} });
+              if (preset) setState({ preset });
+            });
+            loadmatPromise.catch(console.error);
           } else {
-            console.warn(`Type of '${file.name}' must be 'application/json' instead of '${file.type}'.`);
+            console.warn(`Type of '${file.name}' must be 'application/json' instead of '${file.type}' or name must end with '.mat' extension.`);
           }
         }
       }

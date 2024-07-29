@@ -252,6 +252,22 @@ def visualize_from_parameters(parameters: dict, assembly) -> str:
         furling_parameters)
 
 
+@api.post('/api/loadmat')
+def load_mat(request: dict) -> dict:
+    import FreeCAD
+
+    from openafpm_cad_core.app import (
+        loadmat, map_magnafpm_parameters,
+        map_rotor_disk_radius_to_wind_turbine_shape)
+    path = request['body']['path']
+    magnafpm_parameters = map_magnafpm_parameters(loadmat(path))
+    wind_turbine_shape = map_rotor_disk_radius_to_wind_turbine_shape(magnafpm_parameters['RotorDiskRadius'])
+    return {
+        'preset': wind_turbine_shape.value,
+        'magnafpm': map_magnafpm_parameters(loadmat(path))
+    }
+
+
 @api.post('/api/visualize/<assembly>')
 def visualize(request: dict) -> dict:
     import FreeCAD
