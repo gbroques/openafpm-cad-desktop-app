@@ -216,7 +216,7 @@ class InputsForm extends LitElement {
               <!-- file_download material icon -->
               <svg slot="icon" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
             </md-text-button>
-            <md-text-button type="button" @click=${this.handleExport}>
+            <md-text-button type="button" @click=${this.handleExport} title="Export as JSON file">
               Export
               <!-- file_upload material icon -->
               <svg slot="icon" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
