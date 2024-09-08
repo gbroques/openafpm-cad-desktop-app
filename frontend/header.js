@@ -16,7 +16,7 @@ class Header extends LitElement {
       <x-wind-turbine-icon size="2.488rem" fill="var(--primary-color-main)">
       </x-wind-turbine-icon>
       <x-typography variant="h1">
-        OpenAFPM CAD Visualization
+        OpenAFPM CAD
       </x-typography>
     `;
   }
