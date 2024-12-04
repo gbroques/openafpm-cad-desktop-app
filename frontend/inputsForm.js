@@ -102,7 +102,8 @@ class InputsForm extends LitElement {
       font-weight: bold;
       border-radius: 4px;
       font-size: var(--h6);
-      position: relative;
+      position: sticky;
+      bottom: calc(var(--spacing) * 2);
     }
     button[type="submit"]:hover {
       background-color: var(--primary-color-dark);
@@ -278,7 +279,7 @@ class InputsForm extends LitElement {
           html`<x-error-banner .message="${this.errorMessage}" closeable @close=${this.handleCloseError}></x-error-banner>` :
           ""
         }
-        <button type="submit" ?disabled=${isFormLoading || this.errorMessage} style="position: relative">
+        <button type="submit" ?disabled=${isFormLoading || this.errorMessage}>
           ${isFormLoading ? "Loading..." : "Visualize"}
           ${!isFormLoading && this.loading ? html`<x-circular-progress size="var(--h6)" class="submitButtonCircularProgress" color="var(--background-default)"></x-circular-progress>` : ""}
         </button>
