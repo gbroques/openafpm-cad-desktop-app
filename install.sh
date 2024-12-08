@@ -35,13 +35,13 @@ is_macOS()
 
 # https://github.com/FreeCAD/FreeCAD/releases
 if is_linux; then
-  freecad_download_link='https://github.com/FreeCAD/FreeCAD/releases/download/0.21.2/FreeCAD-0.21.2-Linux-x86_64.AppImage'
+  freecad_download_link='https://github.com/FreeCAD/FreeCAD/releases/download/1.0.0/FreeCAD_1.0.0-conda-Linux-x86_64-py311.AppImage'
   archive='freecad.AppImage'
 elif is_macOS; then
   echo "Error: MacOS not supported. Please contribute changes on GitHub." >&2
   exit 1
 else # Windows
-  freecad_download_link='https://github.com/FreeCAD/FreeCAD/releases/download/0.21.2/FreeCAD-0.21.2-Windows-x86_64.7z'
+  freecad_download_link='https://github.com/FreeCAD/FreeCAD/releases/download/1.0.0/FreeCAD_1.0.0-conda-Windows-x86_64-py311.7z'
   archive='freecad.7z'
 fi
 
