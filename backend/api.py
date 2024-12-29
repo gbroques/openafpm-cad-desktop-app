@@ -358,7 +358,8 @@ def handle_get_dimension_tables(request: dict) -> dict:
 
     tables = get_dimension_tables(magnafpm_parameters,
                                   user_parameters,
-                                  furling_parameters)
+                                  furling_parameters,
+                                  img_path_prefix = '/squashfs-root/usr/Mod/openafpm-cad-core/openafpm_cad_core/img/')
     return {'tables': tables}
 
 
