@@ -93,6 +93,9 @@ export default class App extends LitElement {
     .dimensionTablesContainer tfoot td {
       border: none;
     }
+    .dimensionTablesContainer img {
+        max-width: 480px;
+    }
     /**********************************************************/
   `;
   updated(changedProperties) {
