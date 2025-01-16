@@ -16,7 +16,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "lit": "^3.2.1",
-    "openafpm-cad-visualization": "git+https://github.com/gbroques/openafpm-cad-visualization.git#d60bc10c986b7b15e4d098207f2d40f8a7a5044f",
+    "openafpm-cad-visualization": "git+https://github.com/gbroques/openafpm-cad-visualization.git#23bb75c6f24353d13c60dc9f9fc3e27b979d632c",
     "portfinder": "^1.0.32"
   },
   "devDependencies": {
