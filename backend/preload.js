@@ -1,5 +1,6 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-    retry: () => ipcRenderer.send('retry')
+    retry: () => ipcRenderer.send('retry'),
+    webUtils
 });

@@ -522,6 +522,7 @@
       };
 
       const handleFileUpload = file => {
+        const filePath = window.electronAPI.webUtils.getPathForFile(file);
         if (file.type === 'application/json') {
           const reader = new FileReader();
           reader.onload = (loadEvent) =>  {
@@ -537,9 +538,9 @@
             }
           };
           reader.readAsText(file); 
-        } else if (file.path.endsWith('.mat')) {
+        } else if (file.name.endsWith('.mat')) {
           const loadmatPromise = fetchJson('/api/loadmat', {
-            body: JSON.stringify({path: file.path}),
+            body: JSON.stringify({path: filePath}),
             headers: {
               'Content-Type': 'application/json'
             },
