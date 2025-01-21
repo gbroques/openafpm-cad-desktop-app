@@ -6,16 +6,29 @@ const { spawn } = require('child_process');
 const dotenv = require('dotenv');
 const portfinder = require('portfinder');
 
-async function tryWithExponentialBackoff(fn, predicate, maxTries = 8) {
+async function tryWithExponentialBackoff(fn, predicate, mainWindow, maxTries = 7) {
   let result = await fn();
   let numTries = 1;
   while (predicate(result) && numTries < maxTries) {
     const timeInMilliseconds = 2 ** numTries * 100;
-    await wait(timeInMilliseconds);
+    await withProgress(mainWindow, timeInMilliseconds);
     result = await fn();
     numTries++;
   }
   return result;
+}
+
+async function withProgress(mainWindow, max, delay = 100) {
+  let tick = 0;
+  mainWindow.webContents.send('progress', {value: tick * delay , max});
+  tick++;
+  const intervalId = setInterval(() => {
+    mainWindow.webContents.send('progress', {value: tick * delay , max});
+    tick++;
+  }, delay);
+  await wait(max);
+  mainWindow.webContents.send('progress', {value: tick * delay , max});
+  clearInterval(intervalId);
 }
 
 function wait(milliseconds) {
@@ -42,7 +55,6 @@ class Transaction {
 }
 
 function fetchIndexHtml(url) {
-  
   return new Promise(resolve => {
     const transaction = new Transaction();
     transaction.logStart('GET', url);
@@ -111,7 +123,11 @@ electronApp.whenReady()
     const pythonPath = path.join(rootPath, process.env.PYTHON);
     const childProcess = startApi(pythonPath, port);
     const url = `http://127.0.0.1:${port}/index.html`;
-    const result = await tryWithExponentialBackoff(() => fetchIndexHtml(url), (result) => result.type === 'error');
+    const result = await tryWithExponentialBackoff(
+      () => fetchIndexHtml(url),
+      (result) => result.type === 'error',
+      window
+    );
     if (result.type === 'error') {
       const handleRetry = () => {
         fetchIndexHtml(url).then(result => {
