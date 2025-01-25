@@ -5,7 +5,7 @@
   "main": "backend/electron.js",
   "scripts": {
     "start": "electron .",
-    "pack": "electron-builder --dir",
+    "pack": "DEBUG=electron-builder electron-builder --dir",
     "dist": "find dist -type d -name '*-unpacked' | xargs electron-builder --prepackaged"
   },
   "keywords": [],
