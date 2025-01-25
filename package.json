@@ -30,6 +30,7 @@
       "**/*",
       "!freecad.AppImage",
       "!squashfs-root",
+      "!node_modules",
       "!freecad.zip"
     ],
     "afterPack": "./afterPack.js",
