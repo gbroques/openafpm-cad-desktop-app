@@ -84,7 +84,8 @@ export default class App extends LitElement {
     .dimensionTablesContainer td, .dimensionTablesContainer th {
       border: 1px solid var(--text-color);
       padding: calc(var(--spacing) / 2) var(--spacing);
-      transition: border-color var(--transition-duration-standard) ease-in-out
+      transition: border-color var(--transition-duration-standard) ease-in-out;
+      break-inside: avoid-page;
     }
     .dimensionTablesContainer th {
       text-align: left;
