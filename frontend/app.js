@@ -72,6 +72,11 @@ export default class App extends LitElement {
       top: 0;
       z-index: 10;
     }
+    @media print {
+      .tabs {
+        display: none;
+      }
+    }
     /**********************************************************
      * Table styles                                           *
      **********************************************************/
