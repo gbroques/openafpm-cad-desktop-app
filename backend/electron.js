@@ -231,7 +231,7 @@ function createMenu(window) {
                 displayHeaderFooter: true,
                 headerTemplate: '<span><span>', // don't show any header
                 footerTemplate: '<div style="font-size: 14px; text-align: right; width: 100%; padding: 16px"><span class=pageNumber></span> / <span class=totalPages></span><div>',
-                margins: {top: 0, right: 0, bottom: 0, left: 0}
+                margins: {left: 0, right: 0}
             };
             window.webContents.printToPDF(options).then(data => {
               fs.writeFile(pdfPath, data, (error) => {
