@@ -91,7 +91,7 @@ function createWindow() {
       nodeIntegration: false,
       preload: path.join(__dirname, 'preload.js')
     },
-    icon: path.join(__dirname, 'icon.png')
+    icon: path.join(__dirname, 'icon_256x256.png')
   });
 }
 
