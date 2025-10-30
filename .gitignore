@@ -3,6 +3,7 @@ node_modules/
 .env
 freecad.AppImage
 freecad.zip
+freecad.dmg
 squashfs-root/
 dist/
 __pycache__/

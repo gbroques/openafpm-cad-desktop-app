@@ -157,7 +157,7 @@ function createMenu(window) {
     // { role: 'appMenu' }
     ...(isMac
       ? [{
-          label: app.name,
+          label: electronApp.name,
           submenu: [
             { role: 'about' },
             { type: 'separator' },

@@ -16,8 +16,6 @@ A desktop application for quickly testing the integration between [openafpm-cad-
 
        ./install.sh
 
-    Currently the [`install.sh`](./install.sh) script only supports Linux and Windows (via [Git for Windows](https://gitforwindows.org/)). A contribution to support MacOS is welcomed.
-
 ## How to Run
 
     npm start
