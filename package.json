@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "pack": "DEBUG=electron-builder electron-builder --dir",
-    "dist": "find dist -type d -name '*-unpacked' | xargs electron-builder --prepackaged"
+    "dist": "find dist/ -type d -depth 1 | xargs -I {} electron-builder --prepackaged ./{}"
   },
   "keywords": [],
   "author": "G Roques",
@@ -28,10 +28,11 @@
     "asar": false,
     "files": [
       "**/*",
-      "!freecad.AppImage",
       "!squashfs-root",
       "!node_modules",
-      "!freecad.zip"
+      "!freecad.AppImage",
+      "!freecad.zip",
+      "!freecad.dmg"
     ],
     "afterPack": "./afterPack.js",
     "linux": {
@@ -39,6 +40,10 @@
     },
     "win": {
       "target": "portable"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "backend/icon_512x512.png"
     }
   }
 }

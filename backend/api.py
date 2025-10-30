@@ -393,11 +393,12 @@ def handle_get_dimension_tables(request: dict) -> dict:
     user_parameters = parameters["user"]
     furling_parameters = parameters["furling"]
 
+    img_base_path_prefix = "/squashfs-root" if sys.platform == 'darwin' else '/squashfs-root/usr'
     tables = get_dimension_tables(
         magnafpm_parameters,
         user_parameters,
         furling_parameters,
-        img_path_prefix="/squashfs-root/usr/Mod/openafpm-cad-core/openafpm_cad_core/img/",
+        img_path_prefix=f"{img_base_path_prefix}/Mod/openafpm-cad-core/openafpm_cad_core/img/"
     )
     return {"tables": tables}
 

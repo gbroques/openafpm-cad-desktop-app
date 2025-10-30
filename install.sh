@@ -2,9 +2,6 @@
 # ===============================================
 # Install FreeCAD, openafpm-cad-core module,    #
 # and create .env file.                         #
-#                                               #
-# Supports Linux and Windows operating systems. #
-# A contribution to support MacOS is welcomed.  #
 # ===============================================
 
 # Exit on error. 

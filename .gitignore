@@ -7,3 +7,4 @@ freecad.dmg
 squashfs-root/
 dist/
 __pycache__/
+.DS_Store
