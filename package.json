@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "pack": "DEBUG=electron-builder electron-builder --dir",
-    "dist": "find dist/ -type d -depth 1 | xargs -I {} electron-builder --prepackaged ./{}"
+    "dist": "find ./dist/ -mindepth 1 -maxdepth 1 -type d ! -name '_*' | xargs electron-builder --prepackaged"
   },
   "keywords": [],
   "author": "G Roques",
