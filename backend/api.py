@@ -303,7 +303,7 @@ def load_mat(request: dict) -> dict:
     )
     return {
         "preset": wind_turbine_shape.value,
-        "magnafpm": map_magnafpm_parameters(loadmat(path)),
+        "magnafpm": magnafpm_parameters,
     }
 
 
