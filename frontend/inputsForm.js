@@ -168,8 +168,14 @@ class InputsForm extends LitElement {
     }));
   }
   getGroupParameters(groupName) {
-    const groupProperties = this.parametersSchemaByPreset?.[this.preset].properties[groupName].properties ?? {};
+    if (!this.form) return [];
+    const preset = this.mapWindTurbineShapeToPreset(this.form);
+    const groupProperties = this.parametersSchemaByPreset?.[preset].properties[groupName].properties ?? {};
     return Object.entries(groupProperties);
+  }
+  mapWindTurbineShapeToPreset(form) {
+    const windTurbineShape = form.WindTurbineShape.value;
+    return windTurbineShape + ' Shape';
   }
   handleImport(event) {
     this.renderRoot.querySelector('#file-upload').click();
@@ -184,10 +190,11 @@ class InputsForm extends LitElement {
     }));
   }
   handleExport() {
-    if (this.parametersByPreset?.[this.preset]) {
-      const parametersByGroup = groupParameters(this.form, this.parametersByPreset[this.preset]);
+    const preset = this.mapWindTurbineShapeToPreset(this.form);
+    if (this.parametersByPreset?.[preset]) {
+      const parametersByGroup = groupParameters(this.form, this.parametersByPreset[preset]);
       const parametersByGroupWithPreset = {preset: this.preset, ...parametersByGroup};
-      download(JSON.stringify(parametersByGroupWithPreset, null, 2), 'application/json', this.preset + '.json');
+      download(JSON.stringify(parametersByGroupWithPreset, null, 2), 'application/json', preset + '.json');
     }
   }
   render() {
