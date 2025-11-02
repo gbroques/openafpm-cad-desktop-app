@@ -295,6 +295,7 @@ function SchemaInput(props) {
         ${props.schema.title}
         <select
           name="${props.name}"
+          .value="${props.value}"
           ?disabled=${props.disabled}
           @change=${props.onValueChange}>
           ${props.schema.enum.map(value =>
