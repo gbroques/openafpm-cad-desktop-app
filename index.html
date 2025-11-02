@@ -629,8 +629,11 @@
     }
 
     function flatten(object) {
-      return Object.values(object)
-        .reduce((acc, obj) => ({...acc, ...obj}), {});
+      return Object.entries(object)
+        .reduce((acc, entry) => {
+          const [key, value] = entry;
+          return typeof value === 'object' ? {...acc, ...value} : {...acc, [key]: value}
+        }, {});
     }
 
     function mapEntries(obj, entryMapper) {
