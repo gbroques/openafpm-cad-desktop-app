@@ -4,7 +4,7 @@
   "description": "Desktop application to visualize wind turbine designs.",
   "main": "backend/electron.js",
   "scripts": {
-    "start": "electron .",
+    "start": "electron . --no-sandbox",
     "pack": "DEBUG=electron-builder electron-builder --dir",
     "dist": "find ./dist/ -mindepth 1 -maxdepth 1 -type d ! -name '_*' | xargs electron-builder --prepackaged"
   },
