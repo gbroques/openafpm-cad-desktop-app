@@ -250,6 +250,8 @@ def handle_get_parameters_schema() -> dict:
         get_default_parameters,
         get_parameters_schema,
         get_presets,
+        H_SHAPE_LOWER_BOUND,
+        STAR_SHAPE_LOWER_BOUND
     )
 
     def get_parameters_schema_for_preset(preset: str):
@@ -261,7 +263,14 @@ def handle_get_parameters_schema() -> dict:
     first_five_parameter_schemas = [
         get_parameters_schema_for_preset(p) for p in first_five_presets
     ]
-    return {k: v for (k, v) in zip(first_five_presets, first_five_parameter_schemas)}
+    bounds = {
+        'bounds': {
+            'h_shape_lower_bound': H_SHAPE_LOWER_BOUND,
+            'star_shape_lower_bound': STAR_SHAPE_LOWER_BOUND,
+        }
+    }
+    schema_by_preset = {k: v for (k, v) in zip(first_five_presets, first_five_parameter_schemas)}
+    return {**bounds, **schema_by_preset}
 
 
 def load_furl_transform_from_parameters(parameters: dict) -> List[dict]:

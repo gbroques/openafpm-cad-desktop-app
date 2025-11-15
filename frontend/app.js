@@ -35,7 +35,8 @@ export default class App extends LitElement {
     dxfArchiveErrorMessage: { type: String },
     dimensionTablesLoading: { type: Boolean },
     dimensionTablesErrorMessage: { type: String },
-    dimensionTables: { attribute: false }
+    dimensionTables: { attribute: false },
+    shapeBounds: { attribute: false }
   };
   static styles = css`
     :host {
@@ -156,6 +157,7 @@ export default class App extends LitElement {
             .preset=${this.preset}
             .parametersByPreset=${this.parametersByPreset}
             .parametersSchemaByPreset=${this.parametersSchemaByPreset}
+            .shapeBounds=${this.shapeBounds}
             .form=${this.form}
             ?loading=${this.loading}
             .errorMessage=${this.errorMessage}>

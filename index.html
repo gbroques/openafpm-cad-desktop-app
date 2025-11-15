@@ -339,7 +339,11 @@
         dxfArchiveErrorMessage: '',
         dimensionTablesLoading: false,
         dimensionTablesErrorMessage: '',
-        dimensionTables: null
+        dimensionTables: null,
+        shapeBounds: {
+          h_shape_lower_bound: 0,
+          star_shape_lower_bound: 0
+        }
       };
       Object.assign(app, initialState);
       const setState = (nextState) => {
@@ -368,12 +372,14 @@
         const form = mapValues(parameters, value => ({value, validationMessage: ''}));
         setState({ form });
       }
-      promise.then(([parametersByPreset, parametersSchemaByPreset]) => {
+      promise.then(([parametersByPreset, parametersSchemaByPresetResponse]) => {
         const parameters = flatten(parametersByPreset[initialState.preset]);
         const form = mapValues(parameters, value => ({value, validationMessage: ''}));
+        const {bounds, ...parametersSchemaByPreset} = parametersSchemaByPresetResponse;
         setState({
           parametersByPreset,
-          parametersSchemaByPreset
+          parametersSchemaByPreset,
+          shapeBounds: bounds
         });
         setForm();
       })
@@ -413,6 +419,25 @@
               value,
               validationMessage
             }
+          }
+        });
+      });
+
+      // Set the User (excluding WindTurbineShape) and Furling parameters
+      // to default values based on "Wind Turbine Shape" selection.
+      app.addEventListener('wind-turbine-shape-change', event => {
+        const { preset } = event.detail;
+        const parameters = app.parametersByPreset[preset];
+        const userParameters = {...parameters.user};
+        delete userParameters['WindTurbineShape'];
+        const furlingAndUserParameters = mapValues({
+          ...parameters.furling,
+          ...userParameters
+        }, value => ({value, validationMessage: ''}));
+        setState({
+          form: {
+            ...app.form,
+            ...furlingAndUserParameters
           }
         });
       });

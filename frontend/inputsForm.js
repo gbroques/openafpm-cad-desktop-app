@@ -11,6 +11,7 @@ class InputsForm extends LitElement {
     preset: { type: String },
     parametersByPreset: { attribute: false },
     parametersSchemaByPreset: { attribute: false }, 
+    shapeBounds: { attribute: false },
     form: { attribute: false },
     loading: { type: Boolean },
     errorMessage: { type: String }
@@ -175,7 +176,19 @@ class InputsForm extends LitElement {
   }
   mapWindTurbineShapeToPreset(form) {
     const windTurbineShape = form.WindTurbineShape.value;
-    return windTurbineShape + ' Shape';
+    if (windTurbineShape === "Calculated") {
+        const {h_shape_lower_bound, star_shape_lower_bound} = this.shapeBounds;
+        const rotorDiskRadius = form.RotorDiskRadius.value;
+        if (rotorDiskRadius < h_shape_lower_bound) {
+            return 'T Shape';
+        } else if (rotorDiskRadius < star_shape_lower_bound) {
+            return 'H Shape';
+        } else {
+            return 'Star Shape';
+        }
+    } else {
+        return windTurbineShape + ' Shape';
+    }
   }
   handleImport(event) {
     this.renderRoot.querySelector('#file-upload').click();
@@ -195,6 +208,18 @@ class InputsForm extends LitElement {
       const parametersByGroup = groupParameters(this.form, this.parametersByPreset[preset]);
       const parametersByGroupWithPreset = {preset: this.preset, ...parametersByGroup};
       download(JSON.stringify(parametersByGroupWithPreset, null, 2), 'application/json', preset + '.json');
+    }
+  }
+  updated(changedProperties) {
+    if (changedProperties.has('form')) {
+      const prevWindTurbineShape = changedProperties.get('form')?.WindTurbineShape.value;
+      if (prevWindTurbineShape && this.form.WindTurbineShape.value !== prevWindTurbineShape) {
+        this.dispatchEvent(new CustomEvent('wind-turbine-shape-change', {
+          detail: {preset: this.mapWindTurbineShapeToPreset(this.form)},
+          bubbles: true,
+          composed: true
+        }));
+      }
     }
   }
   render() {
