@@ -1,6 +1,6 @@
 /**
  * electron-builder fails to copy squashfs-root directory
- * due to symlinks, and failes to copy all of node_modules.
+ * due to symlinks, and fails to copy all of node_modules.
  *
  * To workaround this, we instruct electron-builder to NOT copy
  * the squashfs-root and node_modules directories in the build
