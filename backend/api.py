@@ -370,10 +370,10 @@ def get_cnc_overview(request: dict) -> dict:
 
     parameters = request["body"]
     magnafpm_parameters = parameters["magnafpm"]
-    user_parameters = parameters["user"]
     furling_parameters = parameters["furling"]
+    user_parameters = parameters["user"]
 
-    svg = preview_dxf_as_svg(magnafpm_parameters, user_parameters, furling_parameters)
+    svg = preview_dxf_as_svg(magnafpm_parameters, furling_parameters, user_parameters)
     return {"svg": svg}
 
 
