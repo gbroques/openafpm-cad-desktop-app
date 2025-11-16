@@ -163,22 +163,26 @@ class InputsForm extends LitElement {
     const { target } = event;
     const { name, value, validationMessage } = target;
     this.dispatchEvent(new CustomEvent('input-change', {
-      detail: { name, value, validationMessage },
+      detail: {
+          name,
+          value,
+          validationMessage,
+          preset: this.mapWindTurbineShapeToPreset(value)
+      },
       bubbles: true,
       composed: true
     }));
   }
   getGroupParameters(groupName) {
     if (!this.form) return [];
-    const preset = this.mapWindTurbineShapeToPreset(this.form);
+    const preset = this.mapWindTurbineShapeToPreset(this.form.WindTurbineShape.value);
     const groupProperties = this.parametersSchemaByPreset?.[preset].properties[groupName].properties ?? {};
     return Object.entries(groupProperties);
   }
-  mapWindTurbineShapeToPreset(form) {
-    const windTurbineShape = form.WindTurbineShape.value;
+  mapWindTurbineShapeToPreset(windTurbineShape) {
     if (windTurbineShape === "Calculated") {
         const {h_shape_lower_bound, star_shape_lower_bound} = this.shapeBounds;
-        const rotorDiskRadius = form.RotorDiskRadius.value;
+        const rotorDiskRadius = this.form.RotorDiskRadius.value;
         if (rotorDiskRadius < h_shape_lower_bound) {
             return 'T Shape';
         } else if (rotorDiskRadius < star_shape_lower_bound) {
@@ -201,6 +205,8 @@ class InputsForm extends LitElement {
       bubbles: true,
       composed: true
     }));
+    // Allow reuploading same file
+    event.target.value = '';
   }
   handleExport() {
     const preset = this.mapWindTurbineShapeToPreset(this.form);
@@ -208,18 +214,6 @@ class InputsForm extends LitElement {
       const parametersByGroup = groupParameters(this.form, this.parametersByPreset[preset]);
       const parametersByGroupWithPreset = {preset: this.preset, ...parametersByGroup};
       download(JSON.stringify(parametersByGroupWithPreset, null, 2), 'application/json', preset + '.json');
-    }
-  }
-  updated(changedProperties) {
-    if (changedProperties.has('form')) {
-      const prevWindTurbineShape = changedProperties.get('form')?.WindTurbineShape.value;
-      if (prevWindTurbineShape && this.form.WindTurbineShape.value !== prevWindTurbineShape) {
-        this.dispatchEvent(new CustomEvent('wind-turbine-shape-change', {
-          detail: {preset: this.mapWindTurbineShapeToPreset(this.form)},
-          bubbles: true,
-          composed: true
-        }));
-      }
     }
   }
   render() {
