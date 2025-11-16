@@ -105,6 +105,19 @@ get_path()
   find $extracted_directory -type f -name "$1" | head -1
 }
 
+# Install additional Python libraries
+# -----------------------------------
+if is_linux; then
+  site_packages_dir=$(find "$extracted_directory/usr/lib" -name "python*" -type d | head -1)/site-packages
+  if [ ! -d "$site_packages_dir/fastapi" ] || [ ! -d "$site_packages_dir/uvicorn" ]; then
+    pip_path=$(get_path pip)
+    echo "Installing fastapi and uvicorn."
+    $pip_path install --target $site_packages_dir fastapi uvicorn
+  else
+    echo "fastapi and uvicorn already installed."
+  fi
+fi
+
 # Create .env file
 # ----------------
 if [ ! -f '.env' ]; then

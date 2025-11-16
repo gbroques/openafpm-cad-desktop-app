@@ -104,7 +104,7 @@ electronApp.on('window-all-closed', () => {
 function startApi(pythonPath, port) {
   const options = { cwd: __dirname, stdio: 'inherit', windowsHide: true };
   const transaction = new Transaction();
-  const childProcess = spawn(pythonPath, ['api.py', port], options);
+  const childProcess = spawn(pythonPath, ['api.py', '--port', port.toString()], options);
   childProcess.on('spawn', () => transaction.logStart('spawn', 'api.py', 'pid', childProcess.pid));
   childProcess.on('error', (error) => transaction.logFailure('error', 'api.py', 'pid', childProcess.pid, error));
   childProcess.on('exit', () => transaction.logFailure('exit', 'api.py', 'pid', childProcess.pid));
