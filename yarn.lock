@@ -2127,9 +2127,8 @@ onetime@^5.1.0:
   dependencies:
     mimic-fn "^2.1.0"
 
-"openafpm-cad-visualization@git+https://github.com/gbroques/openafpm-cad-visualization.git#b1b848b62839f67f38a517e6d48c06cb8bb03dc4":
+"openafpm-cad-visualization@file:../openafpm-cad-visualization":
   version "0.1.0-SNAPSHOT"
-  resolved "git+https://github.com/gbroques/openafpm-cad-visualization.git#b1b848b62839f67f38a517e6d48c06cb8bb03dc4"
   dependencies:
     camera-controls "2.7.2"
     cancelable-promise "^4.3.1"

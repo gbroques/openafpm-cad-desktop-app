@@ -11,6 +11,7 @@ import "./header.js"
 import "./inputsForm.js";
 import "./navigationRail.js";
 import "./navigationRailButton.js";
+import "./progressBar.js";
 import "./tabPanel.js";
 import "./typography.js";
 
@@ -31,11 +32,17 @@ export default class App extends LitElement {
     cncOverviewSvgLoading: { type: Boolean },
     cncOverviewSvgErrorMessage: { type: String },
     cncOverviewSvg: { attribute: false },
+    cncOverviewProgress: { type: Number },
+    cncOverviewProgressMessage: { type: String },
     dxfArchiveLoading: { type: Boolean },
     dxfArchiveErrorMessage: { type: String },
     dimensionTablesLoading: { type: Boolean },
     dimensionTablesErrorMessage: { type: String },
     dimensionTables: { attribute: false },
+    dimensionTablesProgress: { type: Number },
+    dimensionTablesProgressMessage: { type: String },
+    visualizeProgress: { type: Number },
+    visualizeProgressMessage: { type: String },
     shapeBounds: { attribute: false }
   };
   static styles = css`
@@ -217,8 +224,11 @@ export default class App extends LitElement {
         ${!this.cncOverviewSvg && this.cncOverviewSvgLoading && !this.cncOverviewSvgErrorMessage ?
           html`
             <div class="centeredContainer">
-              <x-circular-progress size="50px"></x-circular-progress>
               <p>Loading CNC Overview</p>
+              <x-progress-bar 
+                .progress=${this.cncOverviewProgress || 0}
+                .message=${this.cncOverviewProgressMessage || 'Loading CNC Overview'}>
+              </x-progress-bar>
             </div>
           ` : ""
         }
@@ -252,8 +262,11 @@ export default class App extends LitElement {
         ${!this.dimensionTables && this.dimensionTablesLoading && !this.dimensionTablesErrorMessage ?
           html`
             <div class="centeredContainer">
-              <x-circular-progress size="50px"></x-circular-progress>
               <p>Loading Dimension Tables</p>
+              <x-progress-bar 
+                .progress=${this.dimensionTablesProgress || 0}
+                .message=${this.dimensionTablesProgressMessage || 'Loading Dimension Tables'}>
+              </x-progress-bar>
             </div>
           ` : ""
         }
