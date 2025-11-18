@@ -17,6 +17,7 @@ Key characteristics:
 - Single-entry cache: Only caches latest result due to FreeCAD's shared global state
 - Requests don't need to be simultaneous: Later requests with same parameters get cached results
 - Error propagation: Exceptions are cached and re-raised for waiting requests
+- Progress broadcasting: Multiple clients can receive progress updates from single execution
 
 FreeCAD Global State Issue:
 - FreeCAD uses shared global document state that gets mutated by each load_all() call
@@ -33,21 +34,33 @@ Performance benefits:
 Usage:
     from openafpm_cad_core.app import load_all
     
-    @request_collapse
-    def request_collapsed_load_all(magnafpm_parameters, furling_parameters, user_parameters):
-        return load_all(magnafpm_parameters, furling_parameters, user_parameters)
+    @request_collapse_with_progress
+    def request_collapsed_load_all_with_progress(magnafpm_parameters, furling_parameters, user_parameters, progress_callback=None):
+        return load_all(magnafpm_parameters, furling_parameters, user_parameters, progress_callback)
     
     # Multiple concurrent calls with same parameters will collapse into one execution:
-    # Thread 1: request_collapsed_load_all(params_a, params_b, params_c)  # Executes load_all()
-    # Thread 2: request_collapsed_load_all(params_a, params_b, params_c)  # Waits for Thread 1
-    # Thread 3: request_collapsed_load_all(params_a, params_b, params_c)  # Waits for Thread 1
-    # All threads receive the same result from Thread 1's execution
+    # Thread 1: request_collapsed_load_all_with_progress(params_a, params_b, params_c, callback1)  # Executes load_all()
+    # Thread 2: request_collapsed_load_all_with_progress(params_a, params_b, params_c, callback2)  # Waits for Thread 1
+    # Thread 3: request_collapsed_load_all_with_progress(params_a, params_b, params_c, callback3)  # Waits for Thread 1
+    # All threads receive the same result, and all callbacks receive progress updates
 """
 
+import os
+import sys
+from pathlib import Path
 import threading
 from functools import wraps
-from openafpm_cad_core.app import hash_parameters
 import logging
+
+# Add FreeCAD lib directory to sys.path for importing openafpm_cad_core
+if "FREECAD_LIB" in os.environ:
+    root_path = Path(__file__).absolute().parent.parent
+    freecad_lib = str(root_path.joinpath(os.environ["FREECAD_LIB"]).resolve())
+    if freecad_lib not in sys.path:
+        sys.path.insert(1, freecad_lib)
+
+from openafpm_cad_core.app import hash_parameters
+from progress_broadcaster import ProgressBroadcaster
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -56,6 +69,7 @@ logger = logging.getLogger(__name__)
 # Cache for request collapse - only stores latest result
 _current_cache_key = None
 _current_cache_entry = None
+_current_cancel_event = None  # Track cancel event for active operation
 _cache_lock = threading.Lock()
 
 def request_collapse(func):
@@ -97,7 +111,24 @@ def request_collapse(func):
                     _cache_lock.release()
                     event.wait()
                     _cache_lock.acquire()
-                    logger.info(f"[{request_id}] Wait complete, returning result for {cache_key[:8]}...")
+                    logger.info(f"[{request_id}] Wait complete, checking result for {cache_key[:8]}...")
+                    
+                    # Check if cache was already cleared (cancelled operation)
+                    if _current_cache_entry is None:
+                        logger.info(f"[{request_id}] Cache was cleared, operation was cancelled")
+                        raise InterruptedError("Operation was cancelled")
+                    
+                    # Check if the operation failed and re-raise the exception
+                    if _current_cache_entry["status"] == "error":
+                        error = _current_cache_entry["error"]
+                        logger.info(f"[{request_id}] Re-raising error from completed operation: {error}")
+                        # Clear cache if it was cancelled so new requests can start fresh
+                        if isinstance(error, InterruptedError):
+                            logger.info(f"[{request_id}] Clearing cache entry for cancelled operation")
+                            _current_cache_key = None
+                            _current_cache_entry = None
+                        raise error
+                    
                     return _current_cache_entry["result"]
             else:
                 # Clear old cache and start new loading
@@ -118,6 +149,160 @@ def request_collapse(func):
             logger.error(f"[{request_id}] load_all failed for {cache_key[:8]}...: {e}")
             with _cache_lock:
                 _current_cache_entry = {"status": "error", "error": e}
+            event.set()
+            raise
+    
+    return wrapper
+
+def request_collapse_with_progress(func):
+    """
+    Decorator that collapses multiple requests with progress broadcasting support.
+    
+    Args:
+        func: Function to wrap, must accept (magnafpm_parameters, furling_parameters, user_parameters, progress_callback)
+        
+    Returns:
+        Wrapped function that implements request collapsing with progress broadcasting
+    """
+    @wraps(func)
+    def wrapper(magnafpm_parameters, furling_parameters, user_parameters, progress_callback=None):
+        global _current_cache_key, _current_cache_entry
+        import threading
+        request_id = f"req-{threading.current_thread().ident}"
+        cache_key = hash_parameters(magnafpm_parameters, furling_parameters, user_parameters)
+        
+        logger.info(f"[{request_id}] Request collapse with progress: cache_key={cache_key[:8]}... (current_key: {_current_cache_key[:8] if _current_cache_key else 'None'})")
+        
+        with _cache_lock:
+            # Check if we have a cached result for this exact key
+            if _current_cache_key == cache_key and _current_cache_entry is not None:
+                entry = _current_cache_entry
+                if entry["status"] == "complete":
+                    logger.info(f"[{request_id}] Cache HIT: returning cached result for {cache_key[:8]}...")
+                    if progress_callback:
+                        progress_callback(100, "Using cached result")
+                    return entry["result"]
+                elif entry["status"] == "loading":
+                    logger.info(f"[{request_id}] Cache WAIT: joining existing load for {cache_key[:8]}...")
+                    # Add callback to existing broadcaster
+                    if progress_callback:
+                        entry["progress_broadcaster"].add_callback(progress_callback)
+                    # Wait for completion
+                    event = entry["event"]
+                    # Save reference to this specific entry to detect if it was cleared
+                    waiting_for_entry = entry
+                    _cache_lock.release()
+                    event.wait()
+                    _cache_lock.acquire()
+                    logger.info(f"[{request_id}] Wait complete, checking result for {cache_key[:8]}...")
+                    
+                    # Check if the entry we were waiting for was cleared (cancelled operation)
+                    # This happens when parameters change and a new operation starts
+                    if _current_cache_entry is not waiting_for_entry:
+                        logger.info(f"[{request_id}] Cache entry was replaced, operation was cancelled")
+                        raise InterruptedError("Operation was cancelled")
+                    
+                    # Check if the operation failed and re-raise the exception
+                    if _current_cache_entry["status"] == "error":
+                        error = _current_cache_entry["error"]
+                        logger.info(f"[{request_id}] Re-raising error from completed operation: {error}")
+                        # Clear cache if it was cancelled so new requests can start fresh
+                        if isinstance(error, InterruptedError):
+                            logger.info(f"[{request_id}] Clearing cache entry for cancelled operation")
+                            _current_cache_key = None
+                            _current_cache_entry = None
+                        raise error
+                    
+                    return _current_cache_entry["result"]
+            else:
+                # Cancel any existing operation when parameters change
+                global _current_cancel_event
+                if _current_cancel_event is not None:
+                    logger.info(f"[{request_id}] Cancelling previous operation for new parameters {cache_key[:8]}...")
+                    _current_cancel_event.set()
+                
+                # Save old event to set after releasing lock
+                old_event = None
+                if _current_cache_entry is not None and "event" in _current_cache_entry:
+                    old_event = _current_cache_entry["event"]
+                
+                # Clear old cache and start new loading
+                logger.info(f"[{request_id}] Cache MISS: starting load_all for {cache_key[:8]}...")
+                
+                # Create new cancel event for this operation
+                logger.info(f"[{request_id}] Creating new cancel event...")
+                cancel_event = threading.Event()
+                _current_cancel_event = cancel_event
+                
+                # New execution - create broadcaster
+                logger.info(f"[{request_id}] Creating broadcaster...")
+                broadcaster = ProgressBroadcaster()
+                if progress_callback:
+                    broadcaster.add_callback(progress_callback)
+                    logger.info(f"[{request_id}] Added progress callback to broadcaster")
+                
+                logger.info(f"[{request_id}] Setting up cache entry...")
+                event = threading.Event()
+                _current_cache_key = cache_key
+                _current_cache_entry = {
+                    "status": "loading",
+                    "event": event,
+                    "progress_broadcaster": broadcaster,
+                    "cancel_event": cancel_event,
+                    "result": None
+                }
+                logger.info(f"[{request_id}] Cache entry created successfully")
+        
+        # Set old event AFTER releasing lock so waiting threads can proceed
+        if old_event is not None:
+            logger.info(f"[{request_id}] Setting event for old cache entry after releasing lock...")
+            old_event.set()
+        
+        # Execute with progress broadcasting
+        def broadcast_progress_wrapper(message: str, progress: int):
+            # Check if cache entry still exists (might be cleared during cancellation)
+            with _cache_lock:
+                if _current_cache_entry is not None and "progress_broadcaster" in _current_cache_entry:
+                    _current_cache_entry["progress_broadcaster"].broadcast(message, progress)
+        
+        # Capture cancel_event before execution (it might be cleared during cancellation)
+        cancel_event = _current_cache_entry["cancel_event"]
+        
+        try:
+            logger.info(f"[{request_id}] Executing load_all with progress for {cache_key[:8]}...")
+            logger.info(f"[{request_id}] Getting cancel event from cache entry...")
+            logger.info(f"[{request_id}] About to call load_all function...")
+            try:
+                result = func(magnafpm_parameters, furling_parameters, user_parameters, broadcast_progress_wrapper, cancel_event)
+                logger.info(f"[{request_id}] load_all completed successfully for {cache_key[:8]}...")
+            except Exception as load_error:
+                logger.error(f"[{request_id}] Error during load_all execution: {load_error}")
+                logger.error(f"[{request_id}] Load error type: {type(load_error)}")
+                import traceback
+                logger.error(f"[{request_id}] Load traceback: {traceback.format_exc()}")
+                raise
+            with _cache_lock:
+                # Only set status if cache entry still exists (might be cleared by another thread)
+                if _current_cache_entry is not None:
+                    _current_cache_entry["status"] = "complete"
+                    _current_cache_entry["result"] = result
+            event.set()
+            return result
+        except Exception as e:
+            logger.error(f"[{request_id}] load_all failed for {cache_key[:8]}...: {e}")
+            with _cache_lock:
+                # Only clear/update cache if it's still our entry (not replaced by new operation)
+                if _current_cache_key == cache_key and _current_cache_entry is not None:
+                    if isinstance(e, InterruptedError):
+                        logger.info(f"[{request_id}] Clearing cache for cancelled operation")
+                        _current_cache_key = None
+                        _current_cache_entry = None
+                    else:
+                        # Only set error status for non-cancelled operations
+                        _current_cache_entry["status"] = "error"
+                        _current_cache_entry["error"] = e
+                else:
+                    logger.info(f"[{request_id}] Cache already replaced, not clearing")
             event.set()
             raise
     

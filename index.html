@@ -321,6 +321,10 @@
 
       const buildRequestBody = (form, parameters) => JSON.stringify(groupParameters(form, parameters));
 
+      // Import SSE utilities
+      import("./frontend/sseUtils.js").then(({SSEManager}) => {
+        const sseManager = new SSEManager();
+
       const initialState = {
         preset: Preset.T_SHAPE,
         assembly: Assembly.WIND_TURBINE,
@@ -334,12 +338,21 @@
         archiveErrorMessage: '',
         cncOverviewSvgLoading: false,
         cncOverviewSvgErrorMessage: '',
+        visualizeRetrying: false,
+        cncRetrying: false,
+        dimensionsRetrying: false,
         cncOverviewSvg: '',
+        cncOverviewProgress: 0,
+        cncOverviewProgressMessage: '',
         dxfArchiveLoading: false,
         dxfArchiveErrorMessage: '',
         dimensionTablesLoading: false,
         dimensionTablesErrorMessage: '',
         dimensionTables: null,
+        dimensionTablesProgress: 0,
+        dimensionTablesProgressMessage: '',
+        visualizeProgress: 0,
+        visualizeProgressMessage: '',
         shapeBounds: {
           h_shape_lower_bound: 0,
           star_shape_lower_bound: 0
@@ -454,7 +467,6 @@
       }
 
       let cleanUp = null;
-      let abortController = null;
       let previousBody = null;
       const openAfpmCadVisualization = new OpenAfpmCadVisualization({
         rootDomElement: visualizationRoot,
@@ -470,60 +482,227 @@
         }
       };
       window.addEventListener('resize', handleResize, false);
+      let previousAssembly = app.assembly; // Initialize to current assembly
+      
       function handleVisualize() {
         if (cleanUp) cleanUp();
-        if (app.loading) abortController.abort();
-        abortController = new AbortController();
+        
         const body = buildRequestBody(app.form, app.parametersByPreset[app.preset]);
-        const visualizePromise = fetchJson(`/api/visualize/${app.assembly}`, {
-          body,
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          method: 'POST',
-          signal: abortController.signal
-        });
-        if (previousBody !== body) {
-          const options = {
-            body,
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            method: 'POST'
-          };
-          const cncOverviewPromise = fetchJson(`/api/getcncoverview`, options);
-          setState({ cncOverviewSvg: '', cncOverviewSvgErrorMessage: '' })
-          cncOverviewPromise.then(result => setState({ cncOverviewSvg: result.svg }));
-          setPromiseToState(cncOverviewPromise, 'cncOverviewSvgLoading', 'cncOverviewSvgErrorMessage');
-
-          const dimensionTablesPromise = fetchJson(`/api/getdimensiontables`, options);
-          setState({ dimensionTables: null, dimensionTablesErrorMessage: '' })
-          dimensionTablesPromise.then(result => setState({ dimensionTables: result.tables }));
-          setPromiseToState(dimensionTablesPromise, 'dimensionTablesLoading', 'dimensionTablesErrorMessage');
+        const parameters = groupParameters(app.form, app.parametersByPreset[app.preset]);
+        const assemblyChanged = app.assembly !== previousAssembly;
+        const parametersChanged = previousBody !== body;
+        
+        console.log('handleVisualize called:');
+        console.log(`[TIMESTAMP] ${Date.now()} - handleVisualize called`);
+        console.log('  Current assembly:', app.assembly);
+        console.log('  Previous assembly:', previousAssembly);
+        console.log('  Assembly changed:', assemblyChanged);
+        console.log('  Parameters changed:', parametersChanged);
+        
+        if (parametersChanged) {
+          console.log(`[TIMESTAMP] ${Date.now()} - Parameters changed - closing all connections`);
+          // Parameters changed - close ALL event sources and start all 3 new ones
+          sseManager.closeAllEventSources();
+          
+          // Add small delay to ensure backend cancellation completes before starting new requests
+          // This prevents race conditions where new requests start before old ones are fully cancelled
+          setTimeout(() => {
+            console.log(`[TIMESTAMP] ${Date.now()} - Starting new SSE connections after parameter change...`);
+            // Reset retry flags for fresh start
+            setState({ 
+              visualizeRetrying: false, 
+              cncRetrying: false, 
+              dimensionsRetrying: false 
+            });
+            // Start all 3 SSE connections
+            startVisualizationSSE(app.assembly, parameters);
+            startCNCOverviewSSE(parameters);
+            startDimensionTablesSSE(parameters);
+          }, 500);
+          
+        } else if (assemblyChanged) {
+          console.log(`[TIMESTAMP] ${Date.now()} - Assembly changed only - closing visualize connection`);
+          // Only assembly changed - close only visualize
+          sseManager.closeEventSource('visualize');
+          
+          // Reset visualize retry flag for fresh start
+          setState({ visualizeRetrying: false });
+          
+          // Start only visualization SSE
+          startVisualizationSSE(app.assembly, parameters);
+        } else {
+          console.log(`[TIMESTAMP] ${Date.now()} - No changes detected`);
         }
-        setPromiseToState(visualizePromise, 'loading', 'errorMessage');
-
-        visualizationRoot.innerHTML = '';
-        const loadObjText = () => visualizePromise.then(({objText}) => objText);
-        const furlTransformPromise = visualizePromise.then(({furlTransform}) => furlTransform);
-        furlTransformPromise.catch(error => error.name !== 'AbortError' && console.error(error));
-        openAfpmCadVisualization.visualize(loadObjText, app.assembly, furlTransformPromise);
-        handleResize();
-        const handleMouseMove = (event) => openAfpmCadVisualization.handleMouseMove(event);
-        window.addEventListener('mousemove', handleMouseMove, false);
+        
         previousBody = body;
-        cleanUp = () => {
-          window.removeEventListener('mousemove', handleMouseMove);
-        };
+        previousAssembly = app.assembly;
+        console.log('Updated previousAssembly to:', previousAssembly);
       }
+
+      let visualizationInitialized = false;
+      
+      function startVisualizationSSE(assembly, parameters) {
+        setState({ 
+          loading: true, 
+          errorMessage: '',
+          visualizeProgress: 0,
+          visualizeProgressMessage: 'Starting...'
+        });
+        
+        // Only call visualize() on first initialization
+        if (!visualizationInitialized) {
+          visualizationRoot.innerHTML = '';
+          
+          const loadObjText = () => new Promise(() => {}); // Never resolves, we'll handle completion via SSE
+          const furlTransformPromise = Promise.resolve(null);
+          
+          openAfpmCadVisualization.visualize(loadObjText, assembly, furlTransformPromise);
+          handleResize();
+          visualizationInitialized = true;
+        } else {
+          // For assembly switches, just update progress to show we're loading the new assembly
+          if (app.visualizeProgress > 0 && app.visualizeProgressMessage) {
+            openAfpmCadVisualization.setProgress(app.visualizeProgressMessage, app.visualizeProgress);
+          }
+        }
+        
+        sseManager.startVisualizationSSE(assembly, parameters, {
+          onProgress: (message, progress) => {
+            console.log(`[TIMESTAMP] ${Date.now()} - Visualize progress: ${progress}% - ${message}`);
+            setState({
+              visualizeProgress: progress,
+              visualizeProgressMessage: message
+            });
+            
+            // Pass progress to visualization component
+            openAfpmCadVisualization.setProgress(message, progress);
+          },
+          onComplete: (result) => {
+            console.log(`[TIMESTAMP] ${Date.now()} - Visualize completed:`, result);
+            setState({ 
+              loading: false,
+              visualizeProgress: 100,
+              visualizeProgressMessage: 'Complete'
+            });
+            
+            // Replace the loading with actual content
+            visualizationRoot.innerHTML = '';
+            const loadObjText = () => Promise.resolve(result.objText);
+            const furlTransformPromise = Promise.resolve(result.furlTransform);
+            
+            openAfpmCadVisualization.visualize(loadObjText, assembly, furlTransformPromise);
+            handleResize();
+            
+            const handleMouseMove = (event) => openAfpmCadVisualization.handleMouseMove(event);
+            window.addEventListener('mousemove', handleMouseMove, false);
+            
+            cleanUp = () => {
+              window.removeEventListener('mousemove', handleMouseMove);
+            };
+          },
+          onCancelled: () => {
+            console.log(`[TIMESTAMP] ${Date.now()} - Visualize operation cancelled by backend`);
+            // Don't retry here - the frontend already handles parameter changes
+            // Just log for debugging
+          },
+          onError: (error) => {
+            console.log(`[TIMESTAMP] ${Date.now()} - Visualize SSE error:`, error);
+            setState({ 
+              loading: false, 
+              errorMessage: error,
+              visualizeProgress: 0,
+              visualizeProgressMessage: ''
+            });
+          }
+        });
+      }
+
+      function startCNCOverviewSSE(parameters) {
+        setState({ 
+          cncOverviewSvgLoading: true,
+          cncOverviewSvgErrorMessage: '',
+          cncOverviewSvg: '',
+          cncOverviewProgress: 0,
+          cncOverviewProgressMessage: 'Starting...'
+        });
+        
+        sseManager.startCNCOverviewSSE(parameters, {
+          onProgress: (message, progress) => {
+            setState({
+              cncOverviewProgress: progress,
+              cncOverviewProgressMessage: message
+            });
+          },
+          onComplete: (result) => {
+            setState({ 
+              cncOverviewSvgLoading: false,
+              cncOverviewSvg: result.svg,
+              cncOverviewProgress: 100,
+              cncOverviewProgressMessage: 'Complete'
+            });
+          },
+          onCancelled: () => {
+            console.log('CNC Overview operation cancelled by backend');
+          },
+          onError: (error) => {
+            console.log('CNC Overview SSE error:', error);
+            setState({ 
+              cncOverviewSvgLoading: false,
+              cncOverviewSvgErrorMessage: error,
+              cncOverviewProgress: 0,
+              cncOverviewProgressMessage: ''
+            });
+          }
+        });
+      }
+
+      function startDimensionTablesSSE(parameters) {
+        setState({ 
+          dimensionTablesLoading: true,
+          dimensionTablesErrorMessage: '',
+          dimensionTables: null,
+          dimensionTablesProgress: 0,
+          dimensionTablesProgressMessage: 'Starting...'
+        });
+        
+        sseManager.startDimensionTablesSSE(parameters, {
+          onProgress: (message, progress) => {
+            setState({
+              dimensionTablesProgress: progress,
+              dimensionTablesProgressMessage: message
+            });
+          },
+          onComplete: (result) => {
+            setState({ 
+              dimensionTablesLoading: false,
+              dimensionTables: result.tables,
+              dimensionTablesProgress: 100,
+              dimensionTablesProgressMessage: 'Complete'
+            });
+          },
+          onCancelled: () => {
+            console.log('Dimension Tables operation cancelled by backend');
+          },
+          onError: (error) => {
+            console.log('Dimension Tables SSE error:', error);
+            setState({ 
+              dimensionTablesLoading: false,
+              dimensionTablesErrorMessage: error,
+              dimensionTablesProgress: 0,
+              dimensionTablesProgressMessage: ''
+            });
+          }
+        });
+      }
+
       const debouncedVisualizeHandler = debounce(handleVisualize, 200);
       app.addEventListener('visualize', debouncedVisualizeHandler);
       app.addEventListener('select-assembly', (event) => {
         const { selectedAssembly } = event.detail;
         if (app.assembly !== selectedAssembly) {
           setState({ assembly: selectedAssembly });
-          const hasClickedVisualizeButtonOnce = Boolean(cleanUp);
-          if (hasClickedVisualizeButtonOnce) debouncedVisualizeHandler();
+          // Always trigger visualization when assembly changes
+          debouncedVisualizeHandler();
         }
       });
       app.addEventListener('select-tab', (event) => {
@@ -648,6 +827,8 @@
         '/api/dxfarchive', 'WindTurbineDXF.zip', 'dxfArchiveLoading', 'dxfArchiveErrorMessage'
       );
       app.addEventListener('download-dxf-archive', handleDownloadDxfArchive);
+      
+      }); // Close SSE import
     }
 
     function flatten(object) {

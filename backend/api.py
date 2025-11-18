@@ -16,9 +16,14 @@ import sys
 from pathlib import Path
 import logging
 import time
+import json
+import asyncio
+import queue
+import threading
+from typing import Dict, Any
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
@@ -48,7 +53,7 @@ from openafpm_cad_core.app import (
     get_dxf_archive,
     get_freecad_archive,
 )
-from request_collapse import request_collapse
+from request_collapse import request_collapse, request_collapse_with_progress
 
 
 @request_collapse
@@ -56,6 +61,62 @@ def request_collapsed_load_all(
     magnafpm_parameters, furling_parameters, user_parameters
 ):
     return load_all(magnafpm_parameters, furling_parameters, user_parameters)
+
+
+@request_collapse_with_progress
+def request_collapsed_load_all_with_progress(
+    magnafpm_parameters, furling_parameters, user_parameters, progress_callback=None, cancel_event=None
+):
+    return load_all(
+        magnafpm_parameters, 
+        furling_parameters, 
+        user_parameters, 
+        progress_callback,
+        progress_range=(0, 80),
+        cancel_event=cancel_event
+    )
+
+
+def parse_prefixed_parameters(query_params: Dict[str, str]) -> Dict[str, Any]:
+    """Parse query parameters with dot notation and convert types."""
+    result = {}
+    
+    for key, value in query_params.items():
+        # Convert string values to appropriate types
+        converted_value = convert_query_param_type(value)
+        
+        if "." in key:
+            prefix, param_name = key.split(".", 1)
+            if prefix not in result:
+                result[prefix] = {}
+            result[prefix][param_name] = converted_value
+        else:
+            result[key] = converted_value
+    
+    return result
+
+
+def convert_query_param_type(value: str):
+    """Convert string query param to appropriate type."""
+    # Try boolean
+    if value.lower() in ('true', 'false'):
+        return value.lower() == 'true'
+    
+    # Try int
+    try:
+        if '.' not in value:
+            return int(value)
+    except ValueError:
+        pass
+    
+    # Try float
+    try:
+        return float(value)
+    except ValueError:
+        pass
+    
+    # Return as string
+    return value
 
 
 app = FastAPI()
@@ -89,6 +150,11 @@ class ParametersRequest(BaseModel):
     magnafpm: dict
     user: dict
     furling: dict
+
+
+@app.get("/api/presets")
+def get_presets_endpoint() -> list:
+    return get_presets()
 
 
 @app.get("/api/defaultparameters")
@@ -235,6 +301,372 @@ def get_dimension_tables_endpoint(request: ParametersRequest) -> dict:
         img_path_prefix=f"{img_base_path_prefix}/Mod/openafpm-cad-core/openafpm_cad_core/img/",
     )
     return {"tables": tables}
+
+
+# SSE Endpoints
+@app.get("/api/visualize/{assembly}/stream")
+async def visualize_stream(assembly: str, request: Request):
+    """SSE endpoint for visualize with real-time progress updates."""
+    query_params = dict(request.query_params)
+    parameters = parse_prefixed_parameters(query_params)
+    
+    async def event_stream():
+        progress_queue = queue.Queue()
+        client_disconnected = False
+        
+        def progress_callback(message: str, progress: int):
+            if client_disconnected:
+                return
+            try:
+                progress_queue.put({
+                    "progress": progress, 
+                    "message": message
+                }, block=False)
+            except queue.Full:
+                pass
+        
+        task = asyncio.create_task(
+            execute_visualize_with_progress(assembly, parameters, progress_callback)
+        )
+        
+        try:
+            while not task.done():
+                # Check if client disconnected
+                if await request.is_disconnected():
+                    client_disconnected = True
+                    task.cancel()
+                    return
+                
+                try:
+                    progress_data = progress_queue.get(block=False)
+                    yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
+                except queue.Empty:
+                    await asyncio.sleep(0.1)
+                    continue
+            
+            # Get any remaining progress updates
+            while True:
+                try:
+                    progress_data = progress_queue.get(block=False)
+                    yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
+                except queue.Empty:
+                    break
+            
+            result = await task
+            
+            if result is not None:
+                yield f"event: complete\ndata: {json.dumps(result)}\n\n"
+            else:
+                # Operation was cancelled - send explicit cancellation event
+                yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
+            
+        except asyncio.CancelledError:
+            logger.info("SSE stream cancelled by client disconnect")
+        except Exception as e:
+            logger.error(f"SSE stream error: {e}")
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+    
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@app.get("/api/getcncoverview/stream")
+async def cnc_overview_stream(request: Request):
+    """SSE endpoint for CNC overview with real-time progress updates."""
+    query_params = dict(request.query_params)
+    parameters = parse_prefixed_parameters(query_params)
+    
+    async def event_stream():
+        progress_queue = queue.Queue()
+        client_disconnected = False
+        
+        def progress_callback(message: str, progress: int):
+            if client_disconnected:
+                return
+            try:
+                progress_queue.put({
+                    "progress": progress, 
+                    "message": message
+                }, block=False)
+            except queue.Full:
+                pass
+        
+        task = asyncio.create_task(
+            execute_cnc_overview_with_progress(parameters, progress_callback)
+        )
+        
+        try:
+            while not task.done():
+                if await request.is_disconnected():
+                    client_disconnected = True
+                    task.cancel()
+                    return
+                
+                try:
+                    progress_data = progress_queue.get(block=False)
+                    yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
+                except queue.Empty:
+                    await asyncio.sleep(0.1)
+                    continue
+            
+            while True:
+                try:
+                    progress_data = progress_queue.get(block=False)
+                    yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
+                except queue.Empty:
+                    break
+            
+            result = await task
+            
+            if result is not None:
+                yield f"event: complete\ndata: {json.dumps(result)}\n\n"
+            else:
+                yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
+            
+        except asyncio.CancelledError:
+            logger.info("SSE stream cancelled by client disconnect")
+        except Exception as e:
+            logger.error(f"SSE stream error: {e}")
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+    
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@app.get("/api/getdimensiontables/stream")
+async def dimension_tables_stream(request: Request):
+    """SSE endpoint for dimension tables with real-time progress updates."""
+    query_params = dict(request.query_params)
+    parameters = parse_prefixed_parameters(query_params)
+    
+    async def event_stream():
+        progress_queue = queue.Queue()
+        client_disconnected = False
+        
+        def progress_callback(message: str, progress: int):
+            if client_disconnected:
+                return
+            try:
+                progress_queue.put({
+                    "progress": progress, 
+                    "message": message
+                }, block=False)
+            except queue.Full:
+                pass
+        
+        task = asyncio.create_task(
+            execute_dimension_tables_with_progress(parameters, progress_callback)
+        )
+        
+        try:
+            while not task.done():
+                if await request.is_disconnected():
+                    client_disconnected = True
+                    task.cancel()
+                    return
+                
+                try:
+                    progress_data = progress_queue.get(block=False)
+                    yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
+                except queue.Empty:
+                    await asyncio.sleep(0.1)
+                    continue
+            
+            while True:
+                try:
+                    progress_data = progress_queue.get(block=False)
+                    yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
+                except queue.Empty:
+                    break
+            
+            result = await task
+            
+            if result is not None:
+                yield f"event: complete\ndata: {json.dumps(result)}\n\n"
+            else:
+                yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
+            
+        except asyncio.CancelledError:
+            logger.info("SSE stream cancelled by client disconnect")
+        except Exception as e:
+            logger.error(f"SSE stream error: {e}")
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+    
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+async def execute_visualize_with_progress(assembly: str, parameters: dict, progress_callback):
+    """Execute visualize operation with progress updates."""
+    try:
+        logger.info(f"Starting execute_visualize_with_progress for assembly: {assembly}")
+        loop = asyncio.get_event_loop()
+        
+        # Phase 1: load_all (0-80%)
+        magnafpm_parameters = parameters["magnafpm"]
+        furling_parameters = parameters["furling"] 
+        user_parameters = parameters["user"]
+        
+        logger.info("Calling request_collapsed_load_all_with_progress...")
+        root_documents, spreadsheet_document = await loop.run_in_executor(
+            None, 
+            request_collapsed_load_all_with_progress,
+            magnafpm_parameters, furling_parameters, user_parameters, progress_callback
+        )
+        logger.info("request_collapsed_load_all_with_progress completed")
+        
+        # Phase 2: Assembly processing (80-100%)
+        logger.info("Starting Phase 2 - Assembly processing")
+        try:
+            progress_callback(f"Processing {assembly} assembly...", 90)
+            logger.info("Progress callback 90% completed successfully")
+        except Exception as e:
+            logger.warning(f"Progress callback failed (likely cancelled): {e}")
+    except InterruptedError:
+        logger.info(f"Visualize operation cancelled")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error in execute_visualize_with_progress: {e}")
+        raise
+    
+    try:
+        logger.info(f"Converting assembly string '{assembly}' to enum...")
+        assembly_enum = {
+            "WindTurbine": Assembly.WIND_TURBINE,
+            "StatorMold": Assembly.STATOR_MOLD,
+            "RotorMold": Assembly.ROTOR_MOLD,
+            "MagnetJig": Assembly.MAGNET_JIG,
+            "CoilWinder": Assembly.COIL_WINDER,
+            "BladeTemplate": Assembly.BLADE_TEMPLATE,
+        }.get(assembly)
+        
+        if not assembly_enum:
+            logger.error(f"Invalid assembly type: {assembly}")
+            raise HTTPException(status_code=400, detail="Invalid assembly type")
+            
+        logger.info(f"Assembly enum: {assembly_enum}")
+    except Exception as e:
+        logger.error(f"Assembly conversion failed: {e}")
+        raise HTTPException(status_code=400, detail="Invalid assembly type")
+    
+    logger.info(f"Getting assembly document for {assembly_enum.value}")
+    try:
+        # Use the same approach as the POST endpoint
+        assembly_index = list(Assembly).index(assembly_enum)
+        assembly_document = root_documents[assembly_index]
+        logger.info(f"Got assembly document at index {assembly_index}: {assembly_document}")
+    except (IndexError, KeyError) as e:
+        logger.error(f"Failed to get assembly document: {e}")
+        raise HTTPException(status_code=500, detail=f"Assembly document not found: {e}")
+    
+    progress_callback(f"Converting {assembly} to OBJ...", 95)
+    logger.info(f"Converting {assembly} to OBJ...")
+    obj_text = await loop.run_in_executor(
+        None, get_assembly_to_obj, assembly_enum, assembly_document
+    )
+    logger.info(f"OBJ conversion completed, length: {len(obj_text) if obj_text else 0}")
+    
+    furl_transform = None
+    if assembly_enum == Assembly.WIND_TURBINE:
+        logger.info("Getting furl transform...")
+        furl_transform = await loop.run_in_executor(
+            None, get_furl_transform, assembly_document, spreadsheet_document
+        )
+        logger.info(f"Furl transform completed: {furl_transform is not None}")
+    
+    logger.info(f"Completed {assembly} visualization")
+    try:
+        progress_callback(f"Completed {assembly} visualization", 100)
+    except Exception as e:
+        logger.warning(f"Final progress callback failed (likely cancelled): {e}")
+    
+    return {"objText": obj_text, "furlTransform": furl_transform}
+
+
+async def execute_cnc_overview_with_progress(parameters: dict, progress_callback):
+    """Execute CNC overview operation with progress updates."""
+    try:
+        loop = asyncio.get_event_loop()
+        
+        # Phase 1: load_all (0-80%)
+        magnafpm_parameters = parameters["magnafpm"]
+        furling_parameters = parameters["furling"]
+        user_parameters = parameters["user"]
+        
+        root_documents, spreadsheet_document = await loop.run_in_executor(
+            None,
+            request_collapsed_load_all_with_progress,
+            magnafpm_parameters, furling_parameters, user_parameters, progress_callback
+        )
+        
+        # Phase 2: Generate DXF/SVG (80-100%)
+        try:
+            progress_callback("Generating CNC overview...", 90)
+        except Exception as e:
+            logger.warning(f"Progress callback failed (likely cancelled): {e}")
+        
+        svg_content = await loop.run_in_executor(
+            None, get_dxf_as_svg, root_documents, magnafpm_parameters
+        )
+        
+        try:
+            progress_callback("Completed CNC overview", 100)
+        except Exception as e:
+            logger.warning(f"Final progress callback failed (likely cancelled): {e}")
+        
+        return {"svg": svg_content}
+    except InterruptedError:
+        logger.info("CNC overview operation cancelled")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error in execute_cnc_overview_with_progress: {e}")
+        raise
+
+
+async def execute_dimension_tables_with_progress(parameters: dict, progress_callback):
+    """Execute dimension tables operation with progress updates."""
+    try:
+        logger.info("Starting execute_dimension_tables_with_progress")
+        loop = asyncio.get_event_loop()
+        
+        # Phase 1: load_all (0-80%)
+        magnafpm_parameters = parameters["magnafpm"]
+        furling_parameters = parameters["furling"]
+        user_parameters = parameters["user"]
+        
+        root_documents, spreadsheet_document = await loop.run_in_executor(
+            None,
+            request_collapsed_load_all_with_progress,
+            magnafpm_parameters, furling_parameters, user_parameters, progress_callback
+        )
+        
+        # Phase 2: Generate dimension tables (80-100%)
+        try:
+            progress_callback("Generating dimension tables...", 90)
+        except Exception as e:
+            logger.warning(f"Progress callback failed (likely cancelled): {e}")
+        
+        img_base_path_prefix = (
+            "/squashfs-root" if sys.platform == "darwin" else "/squashfs-root/usr"
+        )
+        
+        tables = await loop.run_in_executor(
+            None,
+            get_dimension_tables,
+            spreadsheet_document,
+            App.listDocuments()["Alternator"],
+            f"{img_base_path_prefix}/Mod/openafpm-cad-core/openafpm_cad_core/img/"
+        )
+        
+        try:
+            progress_callback("Completed dimension tables", 100)
+        except Exception as e:
+            logger.warning(f"Final progress callback failed (likely cancelled): {e}")
+        
+        return {"tables": tables}
+    except InterruptedError:
+        logger.info("Dimension tables operation cancelled")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error in execute_dimension_tables_with_progress: {e}")
+        raise
 
 
 # Mount static file directories after API routes
