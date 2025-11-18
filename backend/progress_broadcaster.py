@@ -33,8 +33,6 @@ class ProgressBroadcaster:
                     callback(message, progress)
                 except Exception as e:
                     logger.warning(f"Progress callback failed: {e}")
-                except Exception as e:
-                    logger.warning(f"Progress callback failed: {e}")
                     failed_callbacks.append(callback)
             
             # Remove failed callbacks (disconnected clients)
