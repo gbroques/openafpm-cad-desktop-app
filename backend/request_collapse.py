@@ -49,10 +49,7 @@ import threading
 from functools import wraps
 import logging
 
-try:
-    from .progress_broadcaster import ProgressBroadcaster
-except ImportError:
-    from progress_broadcaster import ProgressBroadcaster
+from .progress_broadcaster import ProgressBroadcaster
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -62,15 +59,16 @@ logger = logging.getLogger(__name__)
 _current_cache_key = None
 _current_cache_entry = None
 _current_cancel_event = None  # Track cancel event for active operation
+_cleanup_done_for_key = None  # Track which key cleanup was done for
 _cache_lock = threading.Lock()
 
-def request_collapse(key_generator):
+def request_collapse(key_generator, clean_up=None):
     """
     Decorator factory that collapses multiple requests with identical parameters into a single execution.
     Only caches the latest result to avoid stale FreeCAD object references.
     
     Args:
-        key_generator: Function that takes *args and returns a cache key string
+        key_generator: Function that takes *args (positional arguments only) and returns a cache key string
         
     Returns:
         Decorator function that wraps the target function
@@ -82,7 +80,7 @@ def request_collapse(key_generator):
     """
     def decorator(func):
         @wraps(func)
-        def wrapper(*args):
+        def wrapper(*args, **kwargs):
             global _current_cache_key, _current_cache_entry
             import threading
             request_id = f"req-{threading.current_thread().ident}"
@@ -132,7 +130,9 @@ def request_collapse(key_generator):
             
             try:
                 logger.info(f"[{request_id}] Executing load_all for {cache_key[:8]}...")
-                result = func(*args)
+                if clean_up is not None:
+                    clean_up()
+                result = func(*args, **kwargs)
                 logger.info(f"[{request_id}] load_all completed for {cache_key[:8]}...")
                 with _cache_lock:
                     _current_cache_entry = {"status": "complete", "result": result}
@@ -148,25 +148,26 @@ def request_collapse(key_generator):
         return wrapper
     return decorator
 
-def request_collapse_with_progress(key_generator):
+def request_collapse_with_progress(key_generator, clean_up=None):
     """
     Decorator factory that collapses multiple requests with progress broadcasting support.
     
     Args:
-        key_generator: Function that takes *args and returns a cache key string
+        key_generator: Function that takes *args (positional arguments only) and returns a cache key string
         
     Returns:
-        Decorator function that wraps the target function (must accept progress_callback and cancel_event)
+        Decorator function that wraps the target function (must accept progress_callback and cancel_event as kwargs)
     """
     def decorator(func):
         @wraps(func)
-        def wrapper(*args, progress_callback=None):
+        def wrapper(*args, **kwargs):
             global _current_cache_key, _current_cache_entry
             import threading
             request_id = f"req-{threading.current_thread().ident}"
             cache_key = key_generator(*args)
             old_event = None
             event = None
+            progress_callback = kwargs.get('progress_callback')
             
             logger.info(f"[{request_id}] Request collapse with progress: cache_key={cache_key[:8]}... (current_key: {_current_cache_key[:8] if _current_cache_key else 'None'})")
             
@@ -216,10 +217,20 @@ def request_collapse_with_progress(key_generator):
                         return _current_cache_entry["result"]
                 else:
                     # Cancel any existing operation when parameters change
-                    global _current_cancel_event
+                    global _current_cancel_event, _cleanup_done_for_key
+                    old_cache_key = _current_cache_key  # Save old key to check if it changed
+                    should_cleanup = False  # Track if we should cleanup after waiting
+                    
                     if _current_cancel_event is not None:
                         logger.info(f"[{request_id}] Cancelling previous operation for new parameters {cache_key[:8]}...")
                         _current_cancel_event.set()
+                        
+                        # Determine if we should cleanup (before waiting, while we still have the lock)
+                        # Only first thread with new cache key should cleanup
+                        if clean_up is not None and old_cache_key != cache_key and _cleanup_done_for_key != cache_key:
+                            should_cleanup = True
+                            _cleanup_done_for_key = cache_key  # Mark that cleanup will be done for this key
+                            logger.info(f"[{request_id}] Will clean up after old operation completes (old: {old_cache_key[:8] if old_cache_key else 'None'}... -> new: {cache_key[:8]}...)...")
                         
                         # Wait for old operation to actually finish cancelling
                         old_event = _current_cache_entry.get("event") if _current_cache_entry else None
@@ -229,6 +240,36 @@ def request_collapse_with_progress(key_generator):
                             old_event.wait()
                             _cache_lock.acquire()
                             logger.info(f"[{request_id}] Previous operation cancelled, proceeding...")
+                            
+                            # After waiting, check if another thread already created a cache entry for our key
+                            if _current_cache_key == cache_key and _current_cache_entry is not None:
+                                logger.info(f"[{request_id}] Another thread created cache entry, joining...")
+                                entry = _current_cache_entry
+                                if entry["status"] == "loading":
+                                    if progress_callback:
+                                        entry["progress_broadcaster"].add_callback(progress_callback)
+                                    event = entry["event"]
+                                    waiting_for_entry = entry
+                                    _cache_lock.release()
+                                    event.wait()
+                                    _cache_lock.acquire()
+                                    
+                                    if _current_cache_entry is not waiting_for_entry:
+                                        raise InterruptedError("Operation was cancelled")
+                                    if _current_cache_entry["status"] == "error":
+                                        raise _current_cache_entry["error"]
+                                    return _current_cache_entry["result"]
+                                elif entry["status"] == "complete":
+                                    if progress_callback:
+                                        progress_callback(100, "Using cached result")
+                                    return entry["result"]
+                                elif entry["status"] == "error":
+                                    raise entry["error"]
+                            
+                            # Only call cleanup if no other thread created a cache entry yet
+                            if should_cleanup:
+                                logger.info(f"[{request_id}] Calling clean up function...")
+                                clean_up()
                     
                     # Save old event to set after releasing lock
                     old_event = None
@@ -277,7 +318,9 @@ def request_collapse_with_progress(key_generator):
                 logger.info(f"[{request_id}] Getting cancel event from cache entry...")
                 logger.info(f"[{request_id}] About to call load_all function...")
                 try:
-                    result = func(*args, progress_callback=broadcast_progress_wrapper, cancel_event=cancel_event)
+                    # Override kwargs with broadcast wrapper and cancel event
+                    func_kwargs = {**kwargs, 'progress_callback': broadcast_progress_wrapper, 'cancel_event': cancel_event}
+                    result = func(*args, **func_kwargs)
                     logger.info(f"[{request_id}] load_all completed successfully for {cache_key[:8]}...")
                 except Exception as load_error:
                     logger.error(f"[{request_id}] Error during load_all execution: {load_error}")
