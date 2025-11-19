@@ -53,20 +53,19 @@ from openafpm_cad_core.app import (
     get_dimension_tables,
     get_dxf_archive,
     get_freecad_archive,
-    hash_parameters,
-    close_all_documents
+    hash_parameters
 )
 from .request_collapse import request_collapse, request_collapse_with_progress
 
 
-@request_collapse(key_generator=hash_parameters, clean_up=close_all_documents)
+@request_collapse(key_generator=hash_parameters)
 def request_collapsed_load_all(
     magnafpm_parameters, furling_parameters, user_parameters, progress_callback
 ):
     return load_all(magnafpm_parameters, furling_parameters, user_parameters)
 
 
-@request_collapse_with_progress(key_generator=hash_parameters, clean_up=close_all_documents)
+@request_collapse_with_progress(key_generator=hash_parameters)
 def request_collapsed_load_all_with_progress(
     magnafpm_parameters, furling_parameters, user_parameters, progress_callback=None, cancel_event=None
 ):

@@ -338,9 +338,6 @@
         archiveErrorMessage: '',
         cncOverviewSvgLoading: false,
         cncOverviewSvgErrorMessage: '',
-        visualizeRetrying: false,
-        cncRetrying: false,
-        dimensionsRetrying: false,
         cncOverviewSvg: '',
         cncOverviewProgress: 0,
         cncOverviewProgressMessage: '',
@@ -504,29 +501,16 @@
           // Parameters changed - close ALL event sources and start all 3 new ones
           sseManager.closeAllEventSources();
           
-          // Add small delay to ensure backend cancellation completes before starting new requests
-          // This prevents race conditions where new requests start before old ones are fully cancelled
-          setTimeout(() => {
-            console.log(`[TIMESTAMP] ${Date.now()} - Starting new SSE connections after parameter change...`);
-            // Reset retry flags for fresh start
-            setState({ 
-              visualizeRetrying: false, 
-              cncRetrying: false, 
-              dimensionsRetrying: false 
-            });
-            // Start all 3 SSE connections
-            startVisualizationSSE(app.assembly, parameters);
-            startCNCOverviewSSE(parameters);
-            startDimensionTablesSSE(parameters);
-          }, 500);
+          console.log(`[TIMESTAMP] ${Date.now()} - Starting new SSE connections after parameter change...`);
+          // Start all 3 SSE connections (backend handles blocking wait for cancellation)
+          startVisualizationSSE(app.assembly, parameters);
+          startCNCOverviewSSE(parameters);
+          startDimensionTablesSSE(parameters);
           
         } else if (assemblyChanged) {
           console.log(`[TIMESTAMP] ${Date.now()} - Assembly changed only - closing visualize connection`);
           // Only assembly changed - close only visualize
           sseManager.closeEventSource('visualize');
-          
-          // Reset visualize retry flag for fresh start
-          setState({ visualizeRetrying: false });
           
           // Start only visualization SSE
           startVisualizationSSE(app.assembly, parameters);
