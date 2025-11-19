@@ -5,7 +5,7 @@ This module provides a decorator that collapses multiple concurrent requests wit
 parameters into a single execution, preventing duplicate expensive operations.
 
 How it works:
-1. Uses hash_parameters() to generate unique cache keys from request parameters
+1. Uses a key_generator function to generate unique cache keys from request parameters
 2. First request with new parameters executes the wrapped function
 3. Concurrent requests with same parameters wait for the first to complete
 4. All requests receive the same result from the first execution
@@ -32,11 +32,11 @@ Performance benefits:
 - Prevents FreeCAD alias conflicts from concurrent document creation
 
 Usage:
-    from openafpm_cad_core.app import load_all
+    from openafpm_cad_core.app import load_all, hash_parameters
     
-    @request_collapse_with_progress
-    def request_collapsed_load_all_with_progress(magnafpm_parameters, furling_parameters, user_parameters, progress_callback=None):
-        return load_all(magnafpm_parameters, furling_parameters, user_parameters, progress_callback)
+    @request_collapse_with_progress(key_generator=hash_parameters)
+    def request_collapsed_load_all_with_progress(magnafpm_parameters, furling_parameters, user_parameters, progress_callback=None, cancel_event=None):
+        return load_all(magnafpm_parameters, furling_parameters, user_parameters, progress_callback, cancel_event)
     
     # Multiple concurrent calls with same parameters will collapse into one execution:
     # Thread 1: request_collapsed_load_all_with_progress(params_a, params_b, params_c, callback1)  # Executes load_all()
@@ -45,22 +45,11 @@ Usage:
     # All threads receive the same result, and all callbacks receive progress updates
 """
 
-import os
-import sys
-from pathlib import Path
 import threading
 from functools import wraps
 import logging
 
-# Add FreeCAD lib directory to sys.path for importing openafpm_cad_core
-if "FREECAD_LIB" in os.environ:
-    root_path = Path(__file__).absolute().parent.parent
-    freecad_lib = str(root_path.joinpath(os.environ["FREECAD_LIB"]).resolve())
-    if freecad_lib not in sys.path:
-        sys.path.insert(1, freecad_lib)
-
-from openafpm_cad_core.app import hash_parameters
-from progress_broadcaster import ProgressBroadcaster
+from .progress_broadcaster import ProgressBroadcaster
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -72,13 +61,14 @@ _current_cache_entry = None
 _current_cancel_event = None  # Track cancel event for active operation
 _cache_lock = threading.Lock()
 
-def request_collapse(func):
+def request_collapse(func, key_generator):
     """
     Decorator that collapses multiple requests with identical parameters into a single execution.
     Only caches the latest result to avoid stale FreeCAD object references.
     
     Args:
-        func: Function to wrap, must accept (magnafpm_parameters, furling_parameters, user_parameters)
+        func: Function to wrap
+        key_generator: Function that takes *args and returns a cache key string
         
     Returns:
         Wrapped function that implements request collapsing behavior
@@ -89,11 +79,11 @@ def request_collapse(func):
         - "error": Function failed, exception cached and will be re-raised
     """
     @wraps(func)
-    def wrapper(magnafpm_parameters, furling_parameters, user_parameters):
+    def wrapper(*args):
         global _current_cache_key, _current_cache_entry
         import threading
         request_id = f"req-{threading.current_thread().ident}"
-        cache_key = hash_parameters(magnafpm_parameters, furling_parameters, user_parameters)
+        cache_key = key_generator(*args)
         
         logger.info(f"[{request_id}] Request collapse: cache_key={cache_key[:8]}...")
         
@@ -139,7 +129,7 @@ def request_collapse(func):
         
         try:
             logger.info(f"[{request_id}] Executing load_all for {cache_key[:8]}...")
-            result = func(magnafpm_parameters, furling_parameters, user_parameters)
+            result = func(*args)
             logger.info(f"[{request_id}] load_all completed for {cache_key[:8]}...")
             with _cache_lock:
                 _current_cache_entry = {"status": "complete", "result": result}
@@ -154,22 +144,25 @@ def request_collapse(func):
     
     return wrapper
 
-def request_collapse_with_progress(func):
+def request_collapse_with_progress(func, key_generator):
     """
     Decorator that collapses multiple requests with progress broadcasting support.
     
     Args:
-        func: Function to wrap, must accept (magnafpm_parameters, furling_parameters, user_parameters, progress_callback)
+        func: Function to wrap, must accept (*args, progress_callback, cancel_event)
+        key_generator: Function that takes *args and returns a cache key string
         
     Returns:
         Wrapped function that implements request collapsing with progress broadcasting
     """
     @wraps(func)
-    def wrapper(magnafpm_parameters, furling_parameters, user_parameters, progress_callback=None):
+    def wrapper(*args, progress_callback=None):
         global _current_cache_key, _current_cache_entry
         import threading
         request_id = f"req-{threading.current_thread().ident}"
-        cache_key = hash_parameters(magnafpm_parameters, furling_parameters, user_parameters)
+        cache_key = key_generator(*args)
+        old_event = None
+        event = None
         
         logger.info(f"[{request_id}] Request collapse with progress: cache_key={cache_key[:8]}... (current_key: {_current_cache_key[:8] if _current_cache_key else 'None'})")
         
@@ -182,6 +175,9 @@ def request_collapse_with_progress(func):
                     if progress_callback:
                         progress_callback(100, "Using cached result")
                     return entry["result"]
+                elif entry["status"] == "error":
+                    logger.info(f"[{request_id}] Cache HIT: re-raising cached error for {cache_key[:8]}...")
+                    raise entry["error"]
                 elif entry["status"] == "loading":
                     logger.info(f"[{request_id}] Cache WAIT: joining existing load for {cache_key[:8]}...")
                     # Add callback to existing broadcaster
@@ -273,7 +269,7 @@ def request_collapse_with_progress(func):
             logger.info(f"[{request_id}] Getting cancel event from cache entry...")
             logger.info(f"[{request_id}] About to call load_all function...")
             try:
-                result = func(magnafpm_parameters, furling_parameters, user_parameters, broadcast_progress_wrapper, cancel_event)
+                result = func(*args, progress_callback=broadcast_progress_wrapper, cancel_event=cancel_event)
                 logger.info(f"[{request_id}] load_all completed successfully for {cache_key[:8]}...")
             except Exception as load_error:
                 logger.error(f"[{request_id}] Error during load_all execution: {load_error}")
@@ -286,7 +282,8 @@ def request_collapse_with_progress(func):
                 if _current_cache_entry is not None:
                     _current_cache_entry["status"] = "complete"
                     _current_cache_entry["result"] = result
-            event.set()
+            if event:
+                event.set()
             return result
         except Exception as e:
             logger.error(f"[{request_id}] load_all failed for {cache_key[:8]}...: {e}")
@@ -303,7 +300,8 @@ def request_collapse_with_progress(func):
                         _current_cache_entry["error"] = e
                 else:
                     logger.info(f"[{request_id}] Cache already replaced, not clearing")
-            event.set()
+            if event:
+                event.set()
             raise
     
     return wrapper
