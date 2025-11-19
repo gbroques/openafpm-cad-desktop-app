@@ -59,10 +59,9 @@ logger = logging.getLogger(__name__)
 _current_cache_key = None
 _current_cache_entry = None
 _current_cancel_event = None  # Track cancel event for active operation
-_cleanup_done_for_key = None  # Track which key cleanup was done for
 _cache_lock = threading.Lock()
 
-def request_collapse(key_generator, clean_up=None):
+def request_collapse(key_generator):
     """
     Decorator factory that collapses multiple requests with identical parameters into a single execution.
     Only caches the latest result to avoid stale FreeCAD object references.
@@ -148,7 +147,7 @@ def request_collapse(key_generator, clean_up=None):
         return wrapper
     return decorator
 
-def request_collapse_with_progress(key_generator, clean_up=None):
+def request_collapse_with_progress(key_generator):
     """
     Decorator factory that collapses multiple requests with progress broadcasting support.
     
@@ -217,20 +216,11 @@ def request_collapse_with_progress(key_generator, clean_up=None):
                         return _current_cache_entry["result"]
                 else:
                     # Cancel any existing operation when parameters change
-                    global _current_cancel_event, _cleanup_done_for_key
-                    old_cache_key = _current_cache_key  # Save old key to check if it changed
-                    should_cleanup = False  # Track if we should cleanup after waiting
+                    global _current_cancel_event
                     
                     if _current_cancel_event is not None:
                         logger.info(f"[{request_id}] Cancelling previous operation for new parameters {cache_key[:8]}...")
                         _current_cancel_event.set()
-                        
-                        # Determine if we should cleanup (before waiting, while we still have the lock)
-                        # Only first thread with new cache key should cleanup
-                        if clean_up is not None and old_cache_key != cache_key and _cleanup_done_for_key != cache_key:
-                            should_cleanup = True
-                            _cleanup_done_for_key = cache_key  # Mark that cleanup will be done for this key
-                            logger.info(f"[{request_id}] Will clean up after old operation completes (old: {old_cache_key[:8] if old_cache_key else 'None'}... -> new: {cache_key[:8]}...)...")
                         
                         # Wait for old operation to actually finish cancelling
                         old_event = _current_cache_entry.get("event") if _current_cache_entry else None
@@ -265,11 +255,6 @@ def request_collapse_with_progress(key_generator, clean_up=None):
                                     return entry["result"]
                                 elif entry["status"] == "error":
                                     raise entry["error"]
-                            
-                            # Only call cleanup if no other thread created a cache entry yet
-                            if should_cleanup:
-                                logger.info(f"[{request_id}] Calling clean up function...")
-                                clean_up()
                     
                     # Save old event to set after releasing lock
                     old_event = None
