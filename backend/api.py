@@ -154,11 +154,6 @@ class ParametersRequest(BaseModel):
     furling: dict
 
 
-@app.get("/api/presets")
-def get_presets_endpoint() -> list:
-    return get_presets()
-
-
 @app.get("/api/defaultparameters")
 def get_default_parameters_endpoint() -> dict:
     first_five_presets = get_presets()[:5]
@@ -614,7 +609,7 @@ async def execute_cnc_overview_with_progress(parameters: dict, progress_callback
         except Exception as e:
             logger.warning(f"Final progress callback failed (likely cancelled): {e}")
         
-        return {"svg": svg_content}
+        return svg_content
     except InterruptedError:
         logger.info("CNC overview operation cancelled")
         return None
@@ -664,7 +659,7 @@ async def execute_dimension_tables_with_progress(parameters: dict, progress_call
         except Exception as e:
             logger.warning(f"Final progress callback failed (likely cancelled): {e}")
         
-        return {"tables": tables}
+        return tables
     except InterruptedError:
         logger.info("Dimension tables operation cancelled")
         return None

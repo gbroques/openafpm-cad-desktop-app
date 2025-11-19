@@ -609,7 +609,7 @@
           },
           onComplete: (result) => {
             setState({ 
-              cncOverviewSvg: result.svg,
+              cncOverviewSvg: result,
               cncOverviewSvgProgress: 100,
               cncOverviewSvgProgressMessage: ''
             });
@@ -642,7 +642,7 @@
           },
           onComplete: (result) => {
             setState({ 
-              dimensionTables: result.tables,
+              dimensionTables: result,
               dimensionTablesProgress: 100,
               dimensionTablesProgressMessage: ''
             });
@@ -790,8 +790,7 @@
         '/api/dxfarchive', 'WindTurbineDXF.zip', 'dxfArchiveLoading', 'dxfArchiveErrorMessage'
       );
       app.addEventListener('download-dxf-archive', handleDownloadDxfArchive);
-      
-      }); // Close SSE import
+      });
     }
 
     function flatten(object) {
