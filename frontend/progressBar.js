@@ -3,7 +3,7 @@ import "@material/web/progress/linear-progress.js";
 
 export default class ProgressBar extends LitElement {
   static properties = {
-    progress: { type: Number },
+    percent: { type: Number },
     message: { type: String }
   };
 
@@ -29,15 +29,15 @@ export default class ProgressBar extends LitElement {
   `;
 
   render() {
-    const progressValue = this.progress || 0;
+    const percentValue = this.percent || 0;
     const progressMessage = this.message || 'Loading...';
     
     return html`
       <div class="progress-text">
-        ${progressMessage} - ${progressValue}%
+        ${progressMessage}${percentValue > 0 ? ` - ${percentValue}%` : ''}
       </div>
       <md-linear-progress 
-        .value="${progressValue}" 
+        .value="${percentValue}" 
         max="100">
       </md-linear-progress>
     `;

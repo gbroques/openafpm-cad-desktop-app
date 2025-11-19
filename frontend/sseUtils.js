@@ -4,11 +4,7 @@
 
 export class SSEManager {
   constructor() {
-    this.eventSources = {
-      visualize: null,
-      getcncoverview: null,
-      getdimensiontables: null
-    };
+    this.eventSources = {};
   }
 
   /**
@@ -22,6 +18,16 @@ export class SSEManager {
   }
 
   /**
+   * Close visualize SSE connection
+   */
+  closeVisualizeEventSource() {
+    const key = Object.keys(this.eventSources).find(k => k.includes('/api/visualize/'));
+    if (key) {
+      this.closeEventSource(key);
+    }
+  }
+
+  /**
    * Close all SSE connections
    */
   closeAllEventSources() {
@@ -31,51 +37,12 @@ export class SSEManager {
   }
 
   /**
-   * Start visualization SSE stream
+   * Start SSE stream
    */
-  startVisualizationSSE(assembly, parameters, callbacks) {
-    const url = this.#buildSSEUrl(`/api/visualize/${assembly}/stream`, parameters);
-    this.#startSSE('visualize', url, callbacks);
-  }
-
-  /**
-   * Start CNC overview SSE stream
-   */
-  startCNCOverviewSSE(parameters, callbacks) {
-    const url = this.#buildSSEUrl('/api/getcncoverview/stream', parameters);
-    this.#startSSE('getcncoverview', url, callbacks);
-  }
-
-  /**
-   * Start dimension tables SSE stream
-   */
-  startDimensionTablesSSE(parameters, callbacks) {
-    const url = this.#buildSSEUrl('/api/getdimensiontables/stream', parameters);
-    this.#startSSE('getdimensiontables', url, callbacks);
-  }
-
-  /**
-   * Build SSE URL with prefixed parameters
-   */
-  #buildSSEUrl(endpoint, parameters) {
-    const params = new URLSearchParams();
-    
-    // Add all parameter groups generically
-    Object.entries(parameters).forEach(([group, groupParams]) => {
-      Object.entries(groupParams).forEach(([key, value]) => {
-        params.append(`${group}.${key}`, value);
-      });
-    });
-    
-    return `${endpoint}?${params.toString()}`;
-  }
-
-  /**
-   * Internal method to start SSE stream
-   */
-  #startSSE(eventSourceKey, endpoint, callbacks) {
-    const eventSource = new EventSource(endpoint);
-    this.eventSources[eventSourceKey] = eventSource;
+  startSSE(endpoint, parameters, callbacks) {
+    const url = this.#buildSSEUrl(endpoint, parameters);
+    const eventSource = new EventSource(url);
+    this.eventSources[endpoint] = eventSource;
     
     eventSource.addEventListener('progress', (event) => {
       try {
@@ -97,22 +64,22 @@ export class SSEManager {
       } catch (e) {
         console.warn('Failed to parse complete event data:', event.data);
       }
-      this.closeEventSource(eventSourceKey);
+      this.closeEventSource(endpoint);
     });
     
     eventSource.addEventListener('cancelled', (event) => {
-      console.log(`SSE ${eventSourceKey} operation cancelled`);
+      console.log(`SSE ${endpoint} operation cancelled`);
       if (callbacks.onCancelled) {
         callbacks.onCancelled();
       }
-      this.closeEventSource(eventSourceKey);
+      this.closeEventSource(endpoint);
     });
     
     eventSource.addEventListener('error', (event) => {
       if (event.data) {
         try {
           const error = JSON.parse(event.data);
-          console.error(`SSE ${eventSourceKey} error:`, error);
+          console.error(`SSE ${endpoint} error:`, error);
           if (callbacks.onError) {
             callbacks.onError(error.error);
           }
@@ -120,9 +87,25 @@ export class SSEManager {
           console.warn('Failed to parse error event data:', event.data);
         }
       } else {
-        console.log(`SSE ${eventSourceKey} connection closed (readyState:`, eventSource.readyState, ')');
+        console.log(`SSE ${endpoint} connection closed (readyState:`, eventSource.readyState, ')');
       }
-      this.closeEventSource(eventSourceKey);
+      this.closeEventSource(endpoint);
     });
+  }
+
+  /**
+   * Build SSE URL with prefixed parameters
+   */
+  #buildSSEUrl(endpoint, parameters) {
+    const params = new URLSearchParams();
+    
+    // Add all parameter groups generically
+    Object.entries(parameters).forEach(([group, groupParams]) => {
+      Object.entries(groupParams).forEach(([key, value]) => {
+        params.append(`${group}.${key}`, value);
+      });
+    });
+    
+    return `${endpoint}?${params.toString()}`;
   }
 }

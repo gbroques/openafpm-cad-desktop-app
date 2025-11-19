@@ -339,16 +339,13 @@
         archiveErrorMessage: '',
         cncOverviewSvgErrorMessage: '',
         cncOverviewSvg: '',
-        cncOverviewSvgProgress: 0,
-        cncOverviewSvgProgressMessage: '',
+        cncOverviewSvgProgress: null,
         dxfArchiveLoading: false,
         dxfArchiveErrorMessage: '',
         dimensionTablesErrorMessage: '',
         dimensionTables: null,
-        dimensionTablesProgress: 0,
-        dimensionTablesProgressMessage: '',
-        visualizeProgress: 0,
-        visualizeProgressMessage: '',
+        dimensionTablesProgress: null,
+        visualizeProgress: null,
         shapeBounds: {
           h_shape_lower_bound: 0,
           star_shape_lower_bound: 0
@@ -509,7 +506,7 @@
         } else if (assemblyChanged) {
           console.log(`[TIMESTAMP] ${Date.now()} - Assembly changed only - closing visualize connection`);
           // Only assembly changed - close only visualize
-          sseManager.closeEventSource('visualize');
+          sseManager.closeVisualizeEventSource();
           
           // Start only visualization SSE
           startVisualizationSSE(app.assembly, parameters);
@@ -527,8 +524,7 @@
       function startVisualizationSSE(assembly, parameters) {
         setState({ 
           visualizeErrorMessage: '',
-          visualizeProgress: 0,
-          visualizeProgressMessage: 'Starting...'
+          visualizeProgress: { percent: 0, message: 'Starting...' }
         });
         
         // Only call visualize() on first initialization
@@ -543,17 +539,16 @@
           visualizationInitialized = true;
         } else {
           // For assembly switches, just update progress to show we're loading the new assembly
-          if (app.visualizeProgress > 0 && app.visualizeProgressMessage) {
-            openAfpmCadVisualization.setProgress(app.visualizeProgressMessage, app.visualizeProgress);
+          if (app.visualizeProgress) {
+            openAfpmCadVisualization.setProgress(app.visualizeProgress.message, app.visualizeProgress.percent);
           }
         }
         
-        sseManager.startVisualizationSSE(assembly, parameters, {
+        sseManager.startSSE(`/api/visualize/${assembly}/stream`, parameters, {
           onProgress: (message, progress) => {
             console.log(`[TIMESTAMP] ${Date.now()} - Visualize progress: ${progress}% - ${message}`);
             setState({
-              visualizeProgress: progress,
-              visualizeProgressMessage: message
+              visualizeProgress: { percent: progress, message }
             });
             
             // Pass progress to visualization component
@@ -562,8 +557,7 @@
           onComplete: (result) => {
             console.log(`[TIMESTAMP] ${Date.now()} - Visualize completed:`, result);
             setState({ 
-              visualizeProgress: 100,
-              visualizeProgressMessage: ''
+              visualizeProgress: null
             });
             
             // Replace the loading with actual content
@@ -585,8 +579,7 @@
             console.log(`[TIMESTAMP] ${Date.now()} - Visualize SSE error:`, error);
             setState({ 
               visualizeErrorMessage: error,
-              visualizeProgress: 0,
-              visualizeProgressMessage: ''
+              visualizeProgress: null
             });
           }
         });
@@ -596,30 +589,26 @@
         setState({ 
           cncOverviewSvgErrorMessage: '',
           cncOverviewSvg: '',
-          cncOverviewSvgProgress: 0,
-          cncOverviewSvgProgressMessage: 'Starting...'
+          cncOverviewSvgProgress: { percent: 0, message: 'Starting...' }
         });
         
-        sseManager.startCNCOverviewSSE(parameters, {
+        sseManager.startSSE('/api/getcncoverview/stream', parameters, {
           onProgress: (message, progress) => {
             setState({
-              cncOverviewSvgProgress: progress,
-              cncOverviewSvgProgressMessage: message
+              cncOverviewSvgProgress: { percent: progress, message }
             });
           },
           onComplete: (result) => {
             setState({ 
               cncOverviewSvg: result,
-              cncOverviewSvgProgress: 100,
-              cncOverviewSvgProgressMessage: ''
+              cncOverviewSvgProgress: null
             });
           },
           onError: (error) => {
             console.log('CNC Overview SSE error:', error);
             setState({ 
               cncOverviewSvgErrorMessage: error,
-              cncOverviewSvgProgress: 0,
-              cncOverviewSvgProgressMessage: ''
+              cncOverviewSvgProgress: null
             });
           }
         });
@@ -629,30 +618,26 @@
         setState({ 
           dimensionTablesErrorMessage: '',
           dimensionTables: null,
-          dimensionTablesProgress: 0,
-          dimensionTablesProgressMessage: 'Starting...'
+          dimensionTablesProgress: { percent: 0, message: 'Starting...' }
         });
         
-        sseManager.startDimensionTablesSSE(parameters, {
+        sseManager.startSSE('/api/getdimensiontables/stream', parameters, {
           onProgress: (message, progress) => {
             setState({
-              dimensionTablesProgress: progress,
-              dimensionTablesProgressMessage: message
+              dimensionTablesProgress: { percent: progress, message }
             });
           },
           onComplete: (result) => {
             setState({ 
               dimensionTables: result,
-              dimensionTablesProgress: 100,
-              dimensionTablesProgressMessage: ''
+              dimensionTablesProgress: null
             });
           },
           onError: (error) => {
             console.log('Dimension Tables SSE error:', error);
             setState({ 
               dimensionTablesErrorMessage: error,
-              dimensionTablesProgress: 0,
-              dimensionTablesProgressMessage: ''
+              dimensionTablesProgress: null
             });
           }
         });

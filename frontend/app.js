@@ -31,14 +31,13 @@ export default class App extends LitElement {
     archiveErrorMessage: { type: String },
     cncOverviewSvgErrorMessage: { type: String },
     cncOverviewSvg: { attribute: false },
-    cncOverviewSvgProgress: { type: Number },
-    cncOverviewSvgProgressMessage: { type: String },
+    cncOverviewSvgProgress: { attribute: false },
     dxfArchiveLoading: { type: Boolean },
     dxfArchiveErrorMessage: { type: String },
     dimensionTablesErrorMessage: { type: String },
     dimensionTables: { attribute: false },
-    dimensionTablesProgress: { type: Number },
-    dimensionTablesProgressMessage: { type: String },
+    dimensionTablesProgress: { attribute: false },
+    visualizeProgress: { attribute: false },
     shapeBounds: { attribute: false }
   };
   static styles = css`
@@ -212,29 +211,29 @@ export default class App extends LitElement {
       </x-tab-panel>
       <x-tab-panel ?visible=${this.tab === Tab.CNC}>
         <!-- Empty State -->
-        ${!this.cncOverviewSvg && !this.cncOverviewSvgProgressMessage && !this.cncOverviewSvgErrorMessage ?
+        ${!this.cncOverviewSvg && !this.cncOverviewSvgProgress && !this.cncOverviewSvgErrorMessage ?
           html`<x-empty-state></x-empty-state>` :
           ""
         }
         <!-- Loading -->
-        ${!this.cncOverviewSvg && this.cncOverviewSvgProgressMessage && !this.cncOverviewSvgErrorMessage ?
+        ${!this.cncOverviewSvg && this.cncOverviewSvgProgress && !this.cncOverviewSvgErrorMessage ?
           html`
             <div class="centeredContainer">
               <p>Loading CNC Overview</p>
               <x-progress-bar 
-                .progress=${this.cncOverviewSvgProgress || 0}
-                .message=${this.cncOverviewSvgProgressMessage || 'Loading CNC Overview'}>
+                .percent=${this.cncOverviewSvgProgress.percent}
+                .message=${this.cncOverviewSvgProgress.message}>
               </x-progress-bar>
             </div>
           ` : ""
         }
         <!-- Data -->
-        ${this.cncOverviewSvg && !this.cncOverviewSvgProgressMessage && !this.cncOverviewSvgErrorMessage ?
+        ${this.cncOverviewSvg && !this.cncOverviewSvgProgress && !this.cncOverviewSvgErrorMessage ?
           html`<div class="cncOverviewContainer" .innerHTML=${this.cncOverviewSvg}></div>` :
           ""
         }
         <!-- Error -->
-        ${!this.cncOverviewSvg && !this.cncOverviewSvgProgressMessage && this.cncOverviewSvgErrorMessage ?
+        ${!this.cncOverviewSvg && !this.cncOverviewSvgProgress && this.cncOverviewSvgErrorMessage ?
           html`
             <div class="centeredContainer">
               <x-error-banner .message="${this.cncOverviewSvgErrorMessage}" .closeable="${false}"></x-error-banner>
@@ -250,24 +249,24 @@ export default class App extends LitElement {
       </x-tab-panel>
       <x-tab-panel ?visible=${this.tab === Tab.DIMENSIONS}>
         <!-- Empty State -->
-        ${!this.dimensionTables && !this.dimensionTablesProgressMessage && !this.dimensionTablesErrorMessage ?
+        ${!this.dimensionTables && !this.dimensionTablesProgress && !this.dimensionTablesErrorMessage ?
           html`<x-empty-state></x-empty-state>` :
           ""
         }
         <!-- Loading -->
-        ${!this.dimensionTables && this.dimensionTablesProgressMessage && !this.dimensionTablesErrorMessage ?
+        ${!this.dimensionTables && this.dimensionTablesProgress && !this.dimensionTablesErrorMessage ?
           html`
             <div class="centeredContainer">
               <p>Loading Dimension Tables</p>
               <x-progress-bar 
-                .progress=${this.dimensionTablesProgress || 0}
-                .message=${this.dimensionTablesProgressMessage || 'Loading Dimension Tables'}>
+                .percent=${this.dimensionTablesProgress.percent}
+                .message=${this.dimensionTablesProgress.message}>
               </x-progress-bar>
             </div>
           ` : ""
         }
         <!-- Data -->
-        ${this.dimensionTables && !this.dimensionTablesProgressMessage && !this.dimensionTablesErrorMessage ?
+        ${this.dimensionTables && !this.dimensionTablesProgress && !this.dimensionTablesErrorMessage ?
           html`
             <x-container>
               <div class="dimensionTablesContainer">
@@ -276,7 +275,7 @@ export default class App extends LitElement {
           ` : ""
         }
         <!-- Error -->
-        ${!this.dimensionTables && !this.dimensionTablesProgressMessage && this.dimensionTablesErrorMessage ?
+        ${!this.dimensionTables && !this.dimensionTablesProgress && this.dimensionTablesErrorMessage ?
           html`
             <div class="centeredContainer">
               <x-error-banner .message="${this.dimensionTablesErrorMessage}" .closeable="${false}"></x-error-banner>
