@@ -334,7 +334,6 @@
         form: null,
         loading: false,
         errorMessage: '',
-        visualizeErrorMessage: '',
         archiveLoading: false,
         archiveErrorMessage: '',
         cncOverviewSvgErrorMessage: '',
@@ -523,7 +522,7 @@
       
       function startVisualizationSSE(assembly, parameters) {
         setState({ 
-          visualizeErrorMessage: '',
+          errorMessage: '',
           visualizeProgress: { percent: 0, message: 'Starting...' }
         });
         
@@ -578,7 +577,7 @@
           onError: (error) => {
             console.log(`[TIMESTAMP] ${Date.now()} - Visualize SSE error:`, error);
             setState({ 
-              visualizeErrorMessage: error,
+              errorMessage: error,
               visualizeProgress: null
             });
           }
