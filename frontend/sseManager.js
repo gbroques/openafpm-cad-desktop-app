@@ -1,12 +1,13 @@
 /**
- * SSE (Server-Sent Events) utilities for real-time progress updates
+ * Manages Server-Sent Events (SSE) connections for real-time progress updates.
+ * Handles connection lifecycle, event parsing, and automatic cleanup.
  */
-
 export default class SSEManager {
   #eventSourceByEndpoint = {};
 
   /**
-   * Close an SSE connection
+   * Close a specific SSE connection by endpoint path.
+   * @param {string} endpoint - The endpoint path (e.g., '/api/visualize/WindTurbine/stream')
    */
   closeEventSource(endpoint) {
     if (this.#eventSourceByEndpoint[endpoint]) {
@@ -16,7 +17,7 @@ export default class SSEManager {
   }
 
   /**
-   * Close visualize SSE connection
+   * Close the visualize SSE connection by finding any endpoint containing '/api/visualize/'.
    */
   closeVisualizeEventSource() {
     const key = Object.keys(this.#eventSourceByEndpoint).find(k => k.includes('/api/visualize/'));
@@ -26,7 +27,7 @@ export default class SSEManager {
   }
 
   /**
-   * Close all SSE connections
+   * Close all active SSE connections.
    */
   closeAllEventSources() {
     Object.keys(this.#eventSourceByEndpoint).forEach(endpoint => {
@@ -35,7 +36,13 @@ export default class SSEManager {
   }
 
   /**
-   * Start SSE stream
+   * Start a new SSE stream connection.
+   * @param {string} endpoint - The endpoint path (e.g., '/api/getcncoverview/stream')
+   * @param {Object} parameters - Parameter groups to send as query params (e.g., {magnafpm: {...}, furling: {...}})
+   * @param {Object} callbacks - Event callbacks
+   * @param {Function} callbacks.onProgress - Called on progress events with (message: string, progress: number)
+   * @param {Function} callbacks.onComplete - Called on completion with (result: any)
+   * @param {Function} callbacks.onError - Called on error with (error: string)
    */
   startSSE(endpoint, parameters, callbacks) {
     const url = this.#buildSSEUrl(endpoint, parameters);
@@ -65,14 +72,6 @@ export default class SSEManager {
       this.closeEventSource(endpoint);
     });
     
-    eventSource.addEventListener('cancelled', (event) => {
-      console.log(`SSE ${endpoint} operation cancelled`);
-      if (callbacks.onCancelled) {
-        callbacks.onCancelled();
-      }
-      this.closeEventSource(endpoint);
-    });
-    
     eventSource.addEventListener('error', (event) => {
       if (event.data) {
         try {
@@ -92,7 +91,12 @@ export default class SSEManager {
   }
 
   /**
-   * Build SSE URL with prefixed parameters
+   * Build SSE URL with prefixed query parameters.
+   * Converts parameter groups into dot-notation query params (e.g., magnafpm.RotorDiskRadius=123).
+   * @private
+   * @param {string} endpoint - The base endpoint path
+   * @param {Object} parameters - Parameter groups object
+   * @returns {string} Complete URL with query parameters
    */
   #buildSSEUrl(endpoint, parameters) {
     const params = new URLSearchParams();
