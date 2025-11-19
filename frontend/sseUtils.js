@@ -36,19 +36,11 @@ export class SSEManager {
   buildSSEUrl(endpoint, parameters) {
     const params = new URLSearchParams();
     
-    // Add magnafpm parameters
-    Object.entries(parameters.magnafpm).forEach(([key, value]) => {
-      params.append(`magnafpm.${key}`, value);
-    });
-    
-    // Add furling parameters  
-    Object.entries(parameters.furling).forEach(([key, value]) => {
-      params.append(`furling.${key}`, value);
-    });
-    
-    // Add user parameters
-    Object.entries(parameters.user).forEach(([key, value]) => {
-      params.append(`user.${key}`, value);
+    // Add all parameter groups generically
+    Object.entries(parameters).forEach(([group, groupParams]) => {
+      Object.entries(groupParams).forEach(([key, value]) => {
+        params.append(`${group}.${key}`, value);
+      });
     });
     
     return `${endpoint}?${params.toString()}`;
