@@ -3,17 +3,15 @@
  */
 
 export class SSEManager {
-  constructor() {
-    this.eventSources = {};
-  }
+  #eventSourceByEndpoint = {};
 
   /**
    * Close an SSE connection
    */
-  closeEventSource(eventSourceKey) {
-    if (this.eventSources[eventSourceKey]) {
-      this.eventSources[eventSourceKey].close();
-      this.eventSources[eventSourceKey] = null;
+  closeEventSource(endpoint) {
+    if (this.#eventSourceByEndpoint[endpoint]) {
+      this.#eventSourceByEndpoint[endpoint].close();
+      this.#eventSourceByEndpoint[endpoint] = null;
     }
   }
 
@@ -21,7 +19,7 @@ export class SSEManager {
    * Close visualize SSE connection
    */
   closeVisualizeEventSource() {
-    const key = Object.keys(this.eventSources).find(k => k.includes('/api/visualize/'));
+    const key = Object.keys(this.#eventSourceByEndpoint).find(k => k.includes('/api/visualize/'));
     if (key) {
       this.closeEventSource(key);
     }
@@ -31,8 +29,8 @@ export class SSEManager {
    * Close all SSE connections
    */
   closeAllEventSources() {
-    Object.keys(this.eventSources).forEach(eventSourceKey => {
-      this.closeEventSource(eventSourceKey);
+    Object.keys(this.#eventSourceByEndpoint).forEach(endpoint => {
+      this.closeEventSource(endpoint);
     });
   }
 
@@ -42,7 +40,7 @@ export class SSEManager {
   startSSE(endpoint, parameters, callbacks) {
     const url = this.#buildSSEUrl(endpoint, parameters);
     const eventSource = new EventSource(url);
-    this.eventSources[endpoint] = eventSource;
+    this.#eventSourceByEndpoint[endpoint] = eventSource;
     
     eventSource.addEventListener('progress', (event) => {
       try {
