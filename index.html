@@ -312,18 +312,22 @@
       );
       const enumsPromise = import("./frontend/enums.js");
       const groupParametersPromise = import("./frontend/groupParameters.js");
-      Promise.all([openAfpmCadVisualizationPromise, enumsPromise, groupParametersPromise])
+      const sseUtilsPromise = import("./frontend/sseManager.js");
+      Promise.all([openAfpmCadVisualizationPromise, enumsPromise, groupParametersPromise, sseUtilsPromise])
         .then(setup);
     }
-    function setup([{default: OpenAfpmCadVisualization}, enums, {default: groupParameters}]) {
+    function setup([
+      {default: OpenAfpmCadVisualization},
+      enums,
+      {default: groupParameters},
+      {default: SSEManager}
+    ]) {
       const { Tab, Preset, Assembly } = enums;
       const app = document.querySelector("x-app");
 
       const buildRequestBody = (form, parameters) => JSON.stringify(groupParameters(form, parameters));
 
-      // Import SSE utilities
-      import("./frontend/sseUtils.js").then(({SSEManager}) => {
-        const sseManager = new SSEManager();
+      const sseManager = new SSEManager();
 
       const initialState = {
         preset: Preset.T_SHAPE,
@@ -763,7 +767,6 @@
         '/api/dxfarchive', 'WindTurbineDXF.zip', 'dxfArchiveLoading', 'dxfArchiveErrorMessage'
       );
       app.addEventListener('download-dxf-archive', handleDownloadDxfArchive);
-      });
     }
 
     function flatten(object) {

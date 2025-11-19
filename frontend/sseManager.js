@@ -2,7 +2,7 @@
  * SSE (Server-Sent Events) utilities for real-time progress updates
  */
 
-export class SSEManager {
+export default class SSEManager {
   #eventSourceByEndpoint = {};
 
   /**
