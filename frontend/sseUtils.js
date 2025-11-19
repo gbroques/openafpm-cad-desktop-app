@@ -14,10 +14,10 @@ export class SSEManager {
   /**
    * Close an SSE connection
    */
-  closeEventSource(type) {
-    if (this.eventSources[type]) {
-      this.eventSources[type].close();
-      this.eventSources[type] = null;
+  closeEventSource(eventSourceKey) {
+    if (this.eventSources[eventSourceKey]) {
+      this.eventSources[eventSourceKey].close();
+      this.eventSources[eventSourceKey] = null;
     }
   }
 
@@ -25,15 +25,39 @@ export class SSEManager {
    * Close all SSE connections
    */
   closeAllEventSources() {
-    Object.keys(this.eventSources).forEach(type => {
-      this.closeEventSource(type);
+    Object.keys(this.eventSources).forEach(eventSourceKey => {
+      this.closeEventSource(eventSourceKey);
     });
+  }
+
+  /**
+   * Start visualization SSE stream
+   */
+  startVisualizationSSE(assembly, parameters, callbacks) {
+    const url = this.#buildSSEUrl(`/api/visualize/${assembly}/stream`, parameters);
+    this.#startSSE('visualize', url, callbacks);
+  }
+
+  /**
+   * Start CNC overview SSE stream
+   */
+  startCNCOverviewSSE(parameters, callbacks) {
+    const url = this.#buildSSEUrl('/api/getcncoverview/stream', parameters);
+    this.#startSSE('getcncoverview', url, callbacks);
+  }
+
+  /**
+   * Start dimension tables SSE stream
+   */
+  startDimensionTablesSSE(parameters, callbacks) {
+    const url = this.#buildSSEUrl('/api/getdimensiontables/stream', parameters);
+    this.#startSSE('getdimensiontables', url, callbacks);
   }
 
   /**
    * Build SSE URL with prefixed parameters
    */
-  buildSSEUrl(endpoint, parameters) {
+  #buildSSEUrl(endpoint, parameters) {
     const params = new URLSearchParams();
     
     // Add all parameter groups generically
@@ -49,7 +73,7 @@ export class SSEManager {
   /**
    * Internal method to start SSE stream
    */
-  startSSE(eventSourceKey, endpoint, callbacks) {
+  #startSSE(eventSourceKey, endpoint, callbacks) {
     const eventSource = new EventSource(endpoint);
     this.eventSources[eventSourceKey] = eventSource;
     
@@ -100,29 +124,5 @@ export class SSEManager {
       }
       this.closeEventSource(eventSourceKey);
     });
-  }
-
-  /**
-   * Start visualization SSE stream
-   */
-  startVisualizationSSE(assembly, parameters, callbacks) {
-    const url = this.buildSSEUrl(`/api/visualize/${assembly}/stream`, parameters);
-    this.startSSE('visualize', url, callbacks);
-  }
-
-  /**
-   * Start CNC overview SSE stream
-   */
-  startCNCOverviewSSE(parameters, callbacks) {
-    const url = this.buildSSEUrl('/api/getcncoverview/stream', parameters);
-    this.startSSE('getcncoverview', url, callbacks);
-  }
-
-  /**
-   * Start dimension tables SSE stream
-   */
-  startDimensionTablesSSE(parameters, callbacks) {
-    const url = this.buildSSEUrl('/api/getdimensiontables/stream', parameters);
-    this.startSSE('getdimensiontables', url, callbacks);
   }
 }
