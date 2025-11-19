@@ -32,8 +32,8 @@ export default class App extends LitElement {
     cncOverviewSvgLoading: { type: Boolean },
     cncOverviewSvgErrorMessage: { type: String },
     cncOverviewSvg: { attribute: false },
-    cncOverviewProgress: { type: Number },
-    cncOverviewProgressMessage: { type: String },
+    cncOverviewSvgProgress: { type: Number },
+    cncOverviewSvgProgressMessage: { type: String },
     dxfArchiveLoading: { type: Boolean },
     dxfArchiveErrorMessage: { type: String },
     dimensionTablesLoading: { type: Boolean },
@@ -41,8 +41,6 @@ export default class App extends LitElement {
     dimensionTables: { attribute: false },
     dimensionTablesProgress: { type: Number },
     dimensionTablesProgressMessage: { type: String },
-    visualizeProgress: { type: Number },
-    visualizeProgressMessage: { type: String },
     shapeBounds: { attribute: false }
   };
   static styles = css`
@@ -226,8 +224,8 @@ export default class App extends LitElement {
             <div class="centeredContainer">
               <p>Loading CNC Overview</p>
               <x-progress-bar 
-                .progress=${this.cncOverviewProgress || 0}
-                .message=${this.cncOverviewProgressMessage || 'Loading CNC Overview'}>
+                .progress=${this.cncOverviewSvgProgress || 0}
+                .message=${this.cncOverviewSvgProgressMessage || 'Loading CNC Overview'}>
               </x-progress-bar>
             </div>
           ` : ""

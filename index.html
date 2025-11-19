@@ -334,13 +334,15 @@
         form: null,
         loading: false,
         errorMessage: '',
+        visualizeLoading: false,
+        visualizeErrorMessage: '',
         archiveLoading: false,
         archiveErrorMessage: '',
         cncOverviewSvgLoading: false,
         cncOverviewSvgErrorMessage: '',
         cncOverviewSvg: '',
-        cncOverviewProgress: 0,
-        cncOverviewProgressMessage: '',
+        cncOverviewSvgProgress: 0,
+        cncOverviewSvgProgressMessage: '',
         dxfArchiveLoading: false,
         dxfArchiveErrorMessage: '',
         dimensionTablesLoading: false,
@@ -527,8 +529,8 @@
       
       function startVisualizationSSE(assembly, parameters) {
         setState({ 
-          loading: true, 
-          errorMessage: '',
+          visualizeLoading: true, 
+          visualizeErrorMessage: '',
           visualizeProgress: 0,
           visualizeProgressMessage: 'Starting...'
         });
@@ -564,7 +566,7 @@
           onComplete: (result) => {
             console.log(`[TIMESTAMP] ${Date.now()} - Visualize completed:`, result);
             setState({ 
-              loading: false,
+              visualizeLoading: false,
               visualizeProgress: 100,
               visualizeProgressMessage: 'Complete'
             });
@@ -592,8 +594,8 @@
           onError: (error) => {
             console.log(`[TIMESTAMP] ${Date.now()} - Visualize SSE error:`, error);
             setState({ 
-              loading: false, 
-              errorMessage: error,
+              visualizeLoading: false, 
+              visualizeErrorMessage: error,
               visualizeProgress: 0,
               visualizeProgressMessage: ''
             });
@@ -606,23 +608,23 @@
           cncOverviewSvgLoading: true,
           cncOverviewSvgErrorMessage: '',
           cncOverviewSvg: '',
-          cncOverviewProgress: 0,
-          cncOverviewProgressMessage: 'Starting...'
+          cncOverviewSvgProgress: 0,
+          cncOverviewSvgProgressMessage: 'Starting...'
         });
         
         sseManager.startCNCOverviewSSE(parameters, {
           onProgress: (message, progress) => {
             setState({
-              cncOverviewProgress: progress,
-              cncOverviewProgressMessage: message
+              cncOverviewSvgProgress: progress,
+              cncOverviewSvgProgressMessage: message
             });
           },
           onComplete: (result) => {
             setState({ 
               cncOverviewSvgLoading: false,
               cncOverviewSvg: result.svg,
-              cncOverviewProgress: 100,
-              cncOverviewProgressMessage: 'Complete'
+              cncOverviewSvgProgress: 100,
+              cncOverviewSvgProgressMessage: 'Complete'
             });
           },
           onCancelled: () => {
@@ -633,8 +635,8 @@
             setState({ 
               cncOverviewSvgLoading: false,
               cncOverviewSvgErrorMessage: error,
-              cncOverviewProgress: 0,
-              cncOverviewProgressMessage: ''
+              cncOverviewSvgProgress: 0,
+              cncOverviewSvgProgressMessage: ''
             });
           }
         });
