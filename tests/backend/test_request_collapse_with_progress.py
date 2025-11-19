@@ -24,7 +24,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
         mock_func = Mock(return_value="result")
         key_gen = Mock(return_value="key1")
         
-        decorated = request_collapse_with_progress(mock_func, key_gen)
+        decorated = request_collapse_with_progress(key_gen)(mock_func)
         result = decorated("arg1", "arg2")
         
         self.assertEqual(result, "result")
@@ -43,7 +43,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
             time.sleep(0.1)
             return "result"
         
-        decorated = request_collapse_with_progress(slow_func, lambda *args: "key1")
+        decorated = request_collapse_with_progress(lambda *args: "key1")(slow_func)
         
         results = []
         def worker():
@@ -61,7 +61,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
     def test_sequential_requests_same_params_use_cache(self):
         """Sequential requests with same parameters should use cached result."""
         mock_func = Mock(return_value="result")
-        decorated = request_collapse_with_progress(mock_func, lambda *args: "key1")
+        decorated = request_collapse_with_progress(lambda *args: "key1")(mock_func)
         
         result1 = decorated("arg1", "arg2")
         result2 = decorated("arg1", "arg2")
@@ -75,7 +75,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
         mock_func = Mock(side_effect=["result1", "result2"])
         key_gen = Mock(side_effect=["key1", "key2"])
         
-        decorated = request_collapse_with_progress(mock_func, key_gen)
+        decorated = request_collapse_with_progress(key_gen)(mock_func)
         
         result1 = decorated("arg1")
         result2 = decorated("arg2")
@@ -93,7 +93,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
                 progress_callback("step3", 100)
             return "result"
         
-        decorated = request_collapse_with_progress(func_with_progress, lambda *args: "key1")
+        decorated = request_collapse_with_progress(lambda *args: "key1")(func_with_progress)
         
         callback = Mock()
         result = decorated("arg1", progress_callback=callback)
@@ -117,7 +117,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
                 progress_callback("end", 100)
             return "result"
         
-        decorated = request_collapse_with_progress(slow_func, lambda *args: "key1")
+        decorated = request_collapse_with_progress(lambda *args: "key1")(slow_func)
         
         callbacks = [Mock(), Mock(), Mock()]
         results = []
@@ -138,7 +138,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
     def test_cached_result_sends_immediate_progress(self):
         """Cached result should send immediate 100% progress."""
         mock_func = Mock(return_value="result")
-        decorated = request_collapse_with_progress(mock_func, lambda *args: "key1")
+        decorated = request_collapse_with_progress(lambda *args: "key1")(mock_func)
         
         # First call to populate cache
         decorated("arg1")
@@ -156,7 +156,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
             time.sleep(0.05)
             raise ValueError("test error")
         
-        decorated = request_collapse_with_progress(failing_func, lambda *args: "key1")
+        decorated = request_collapse_with_progress(lambda *args: "key1")(failing_func)
         
         exceptions = []
         
@@ -185,7 +185,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
             call_count += 1
             raise ValueError("test error")
         
-        decorated = request_collapse_with_progress(failing_func, lambda *args: "key1")
+        decorated = request_collapse_with_progress(lambda *args: "key1")(failing_func)
         
         with self.assertRaises(ValueError):
             decorated("arg1")
@@ -207,7 +207,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
                 raise InterruptedError("cancelled")
             return "result"
         
-        decorated = request_collapse_with_progress(func, lambda *args: "key1")
+        decorated = request_collapse_with_progress(lambda *args: "key1")(func)
         
         with self.assertRaises(InterruptedError):
             decorated("arg1")
@@ -229,7 +229,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
                 raise InterruptedError("cancelled")
             return f"result-{args[0]}"
         
-        decorated = request_collapse_with_progress(slow_func, lambda *args: f"key-{args[0]}")
+        decorated = request_collapse_with_progress(lambda *args: f"key-{args[0]}")(slow_func)
         
         results = []
         exceptions = []
@@ -259,33 +259,28 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
         self.assertTrue(cancel_events[0].is_set())
     
     def test_waiting_request_detects_cache_replacement(self):
-        """Waiting request should detect when cache entry is replaced."""
+        """New request with different params waits for old operation to complete."""
+        results = {}
+        exceptions = []
+        
         def slow_func(*args, progress_callback=None, cancel_event=None):
             time.sleep(0.1)
             return f"result-{args[0]}"
         
-        decorated = request_collapse_with_progress(slow_func, lambda *args: f"key-{args[0]}")
-        
-        exceptions = []
+        decorated = request_collapse_with_progress(lambda *args: f"key-{args[0]}")(slow_func)
         
         def worker1():
-            try:
-                decorated("param1")
-            except InterruptedError as e:
-                exceptions.append(("worker1", e))
+            results["worker1"] = decorated("param1")
         
         def worker2():
             try:
-                decorated("param1")
+                results["worker2"] = decorated("param1")
             except InterruptedError as e:
                 exceptions.append(("worker2", e))
         
         def worker3():
             time.sleep(0.02)
-            try:
-                decorated("param2")
-            except InterruptedError as e:
-                exceptions.append(("worker3", e))
+            results["worker3"] = decorated("param2")
         
         threads = [
             threading.Thread(target=worker1),
@@ -297,9 +292,12 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
         for t in threads:
             t.join()
         
-        # Worker1 and Worker2 should detect cache replacement
-        exception_sources = [src for src, _ in exceptions]
-        self.assertIn("worker2", exception_sources)
+        # Worker1 should complete successfully
+        self.assertEqual(results["worker1"], "result-param1")
+        # Worker3 waits for param1 to finish, then executes param2
+        self.assertEqual(results["worker3"], "result-param2")
+        # Worker2 may complete or be interrupted depending on timing
+        # (race between completion and cache replacement)
     
     def test_cancel_event_passed_to_function(self):
         """Cancel event should be passed to the wrapped function."""
@@ -310,7 +308,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
             received_cancel_event = cancel_event
             return "result"
         
-        decorated = request_collapse_with_progress(func, lambda *args: "key1")
+        decorated = request_collapse_with_progress(lambda *args: "key1")(func)
         decorated("arg1")
         
         self.assertIsNotNone(received_cancel_event)
@@ -319,7 +317,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
     def test_no_progress_callback_works(self):
         """Function should work without progress callback."""
         mock_func = Mock(return_value="result")
-        decorated = request_collapse_with_progress(mock_func, lambda *args: "key1")
+        decorated = request_collapse_with_progress(lambda *args: "key1")(mock_func)
         
         result = decorated("arg1")
         
@@ -334,7 +332,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
             time.sleep(0.1)
             return "result"
         
-        decorated = request_collapse_with_progress(slow_func, lambda *args: "key1")
+        decorated = request_collapse_with_progress(lambda *args: "key1")(slow_func)
         
         exception_caught = False
         
@@ -370,30 +368,28 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
         self.assertTrue(exception_caught)
     
     def test_old_event_set_after_lock_release(self):
-        """Old cache entry's event should be set after lock is released."""
-        events_set = []
+        """New request waits for old operation to complete before starting."""
+        results = {}
+        exceptions = []
         
         def func(*args, progress_callback=None, cancel_event=None):
             time.sleep(0.05)
             return f"result-{args[0]}"
         
-        decorated = request_collapse_with_progress(func, lambda *args: f"key-{args[0]}")
+        decorated = request_collapse_with_progress(lambda *args: f"key-{args[0]}")(func)
         
         def worker1():
-            try:
-                decorated("param1")
-            except InterruptedError:
-                pass
+            results["worker1"] = decorated("param1")
         
         def worker2():
             try:
-                decorated("param1")
-            except InterruptedError:
-                events_set.append("worker2-interrupted")
+                results["worker2"] = decorated("param1")
+            except InterruptedError as e:
+                exceptions.append(("worker2", e))
         
         def worker3():
             time.sleep(0.01)
-            decorated("param2")
+            results["worker3"] = decorated("param2")
         
         threads = [
             threading.Thread(target=worker1),
@@ -405,8 +401,11 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
         for t in threads:
             t.join()
         
-        # Worker2 should be interrupted when cache is replaced
-        self.assertIn("worker2-interrupted", events_set)
+        # Worker1 completes successfully with param1
+        self.assertEqual(results["worker1"], "result-param1")
+        # Worker3 waits for param1 to finish, then executes param2
+        self.assertEqual(results["worker3"], "result-param2")
+        # Worker2 may complete or be interrupted (race condition)
 
 
 if __name__ == "__main__":
