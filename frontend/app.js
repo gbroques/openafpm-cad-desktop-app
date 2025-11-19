@@ -29,14 +29,12 @@ export default class App extends LitElement {
     tab: { type: String },
     archiveLoading: { type: Boolean },
     archiveErrorMessage: { type: String },
-    cncOverviewSvgLoading: { type: Boolean },
     cncOverviewSvgErrorMessage: { type: String },
     cncOverviewSvg: { attribute: false },
     cncOverviewSvgProgress: { type: Number },
     cncOverviewSvgProgressMessage: { type: String },
     dxfArchiveLoading: { type: Boolean },
     dxfArchiveErrorMessage: { type: String },
-    dimensionTablesLoading: { type: Boolean },
     dimensionTablesErrorMessage: { type: String },
     dimensionTables: { attribute: false },
     dimensionTablesProgress: { type: Number },
@@ -214,12 +212,12 @@ export default class App extends LitElement {
       </x-tab-panel>
       <x-tab-panel ?visible=${this.tab === Tab.CNC}>
         <!-- Empty State -->
-        ${!this.cncOverviewSvg && !this.cncOverviewSvgLoading && !this.cncOverviewSvgErrorMessage ?
+        ${!this.cncOverviewSvg && !this.cncOverviewSvgProgressMessage && !this.cncOverviewSvgErrorMessage ?
           html`<x-empty-state></x-empty-state>` :
           ""
         }
         <!-- Loading -->
-        ${!this.cncOverviewSvg && this.cncOverviewSvgLoading && !this.cncOverviewSvgErrorMessage ?
+        ${!this.cncOverviewSvg && this.cncOverviewSvgProgressMessage && !this.cncOverviewSvgErrorMessage ?
           html`
             <div class="centeredContainer">
               <p>Loading CNC Overview</p>
@@ -231,12 +229,12 @@ export default class App extends LitElement {
           ` : ""
         }
         <!-- Data -->
-        ${this.cncOverviewSvg && !this.cncOverviewSvgLoading && !this.cncOverviewSvgErrorMessage ?
+        ${this.cncOverviewSvg && !this.cncOverviewSvgProgressMessage && !this.cncOverviewSvgErrorMessage ?
           html`<div class="cncOverviewContainer" .innerHTML=${this.cncOverviewSvg}></div>` :
           ""
         }
         <!-- Error -->
-        ${!this.cncOverviewSvg && !this.cncOverviewSvgLoading && this.cncOverviewSvgErrorMessage ?
+        ${!this.cncOverviewSvg && !this.cncOverviewSvgProgressMessage && this.cncOverviewSvgErrorMessage ?
           html`
             <div class="centeredContainer">
               <x-error-banner .message="${this.cncOverviewSvgErrorMessage}" .closeable="${false}"></x-error-banner>
@@ -252,12 +250,12 @@ export default class App extends LitElement {
       </x-tab-panel>
       <x-tab-panel ?visible=${this.tab === Tab.DIMENSIONS}>
         <!-- Empty State -->
-        ${!this.dimensionTables && !this.dimensionTablesLoading && !this.dimensionTablesErrorMessage ?
+        ${!this.dimensionTables && !this.dimensionTablesProgressMessage && !this.dimensionTablesErrorMessage ?
           html`<x-empty-state></x-empty-state>` :
           ""
         }
         <!-- Loading -->
-        ${!this.dimensionTables && this.dimensionTablesLoading && !this.dimensionTablesErrorMessage ?
+        ${!this.dimensionTables && this.dimensionTablesProgressMessage && !this.dimensionTablesErrorMessage ?
           html`
             <div class="centeredContainer">
               <p>Loading Dimension Tables</p>
@@ -269,7 +267,7 @@ export default class App extends LitElement {
           ` : ""
         }
         <!-- Data -->
-        ${this.dimensionTables && !this.dimensionTablesLoading && !this.dimensionTablesErrorMessage ?
+        ${this.dimensionTables && !this.dimensionTablesProgressMessage && !this.dimensionTablesErrorMessage ?
           html`
             <x-container>
               <div class="dimensionTablesContainer">
@@ -278,7 +276,7 @@ export default class App extends LitElement {
           ` : ""
         }
         <!-- Error -->
-        ${!this.dimensionTables && !this.dimensionTablesLoading && this.dimensionTablesErrorMessage ?
+        ${!this.dimensionTables && !this.dimensionTablesProgressMessage && this.dimensionTablesErrorMessage ?
           html`
             <div class="centeredContainer">
               <x-error-banner .message="${this.dimensionTablesErrorMessage}" .closeable="${false}"></x-error-banner>
