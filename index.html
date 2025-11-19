@@ -586,11 +586,6 @@
               window.removeEventListener('mousemove', handleMouseMove);
             };
           },
-          onCancelled: () => {
-            console.log(`[TIMESTAMP] ${Date.now()} - Visualize operation cancelled by backend`);
-            // Don't retry here - the frontend already handles parameter changes
-            // Just log for debugging
-          },
           onError: (error) => {
             console.log(`[TIMESTAMP] ${Date.now()} - Visualize SSE error:`, error);
             setState({ 
@@ -627,9 +622,6 @@
               cncOverviewSvgProgressMessage: 'Complete'
             });
           },
-          onCancelled: () => {
-            console.log('CNC Overview operation cancelled by backend');
-          },
           onError: (error) => {
             console.log('CNC Overview SSE error:', error);
             setState({ 
@@ -665,9 +657,6 @@
               dimensionTablesProgress: 100,
               dimensionTablesProgressMessage: 'Complete'
             });
-          },
-          onCancelled: () => {
-            console.log('Dimension Tables operation cancelled by backend');
           },
           onError: (error) => {
             console.log('Dimension Tables SSE error:', error);
