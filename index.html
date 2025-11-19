@@ -585,62 +585,51 @@
         });
       }
 
-      function startCNCOverviewSSE(parameters) {
+      function startSSEStream(endpoint, stateKeys, parameters) {
         setState({ 
-          cncOverviewSvgErrorMessage: '',
-          cncOverviewSvg: '',
-          cncOverviewSvgProgress: { percent: 0, message: 'Starting...' }
+          [stateKeys.error]: '',
+          [stateKeys.data]: stateKeys.initialData,
+          [stateKeys.progress]: { percent: 0, message: 'Starting...' }
         });
         
-        sseManager.startSSE('/api/getcncoverview/stream', parameters, {
+        sseManager.startSSE(endpoint, parameters, {
           onProgress: (message, progress) => {
             setState({
-              cncOverviewSvgProgress: { percent: progress, message }
+              [stateKeys.progress]: { percent: progress, message }
             });
           },
           onComplete: (result) => {
             setState({ 
-              cncOverviewSvg: result,
-              cncOverviewSvgProgress: null
+              [stateKeys.data]: result,
+              [stateKeys.progress]: null
             });
           },
           onError: (error) => {
-            console.log('CNC Overview SSE error:', error);
+            console.log(`${stateKeys.data} SSE error:`, error);
             setState({ 
-              cncOverviewSvgErrorMessage: error,
-              cncOverviewSvgProgress: null
+              [stateKeys.error]: error,
+              [stateKeys.progress]: null
             });
           }
         });
       }
 
+      function startCNCOverviewSSE(parameters) {
+        startSSEStream('/api/getcncoverview/stream', {
+          error: 'cncOverviewSvgErrorMessage',
+          data: 'cncOverviewSvg',
+          progress: 'cncOverviewSvgProgress',
+          initialData: ''
+        }, parameters);
+      }
+
       function startDimensionTablesSSE(parameters) {
-        setState({ 
-          dimensionTablesErrorMessage: '',
-          dimensionTables: null,
-          dimensionTablesProgress: { percent: 0, message: 'Starting...' }
-        });
-        
-        sseManager.startSSE('/api/getdimensiontables/stream', parameters, {
-          onProgress: (message, progress) => {
-            setState({
-              dimensionTablesProgress: { percent: progress, message }
-            });
-          },
-          onComplete: (result) => {
-            setState({ 
-              dimensionTables: result,
-              dimensionTablesProgress: null
-            });
-          },
-          onError: (error) => {
-            console.log('Dimension Tables SSE error:', error);
-            setState({ 
-              dimensionTablesErrorMessage: error,
-              dimensionTablesProgress: null
-            });
-          }
-        });
+        startSSEStream('/api/getdimensiontables/stream', {
+          error: 'dimensionTablesErrorMessage',
+          data: 'dimensionTables',
+          progress: 'dimensionTablesProgress',
+          initialData: null
+        }, parameters);
       }
 
       const debouncedVisualizeHandler = debounce(handleVisualize, 200);
