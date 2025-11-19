@@ -3,6 +3,7 @@ import { Tab, Assembly } from "./enums.js";
 
 import "@material/web/tabs/primary-tab.js";
 import "@material/web/tabs/tabs.js";
+import "./circularProgress.js";
 import "./container.js";
 import "./downloadButton.js";
 import "./emptyState.js";
@@ -75,6 +76,17 @@ export default class App extends LitElement {
       top: 0;
       z-index: 10;
     }
+    .tab-label {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .tab-spinner {
+      position: absolute;
+      right: calc(var(--spacing) * -3);
+      width: 16px;
+      height: 16px;
+    }
     @media print {
       .tabs {
         display: none;
@@ -144,12 +156,31 @@ export default class App extends LitElement {
       composed: true
     }));
   }
+
+  shouldShowSpinner(tab) {
+    switch(tab) {
+      case Tab.VISUALIZE:
+        return Boolean(this.visualizeProgress);
+      case Tab.CNC:
+        return Boolean(this.cncOverviewSvgProgress);
+      case Tab.DIMENSIONS:
+        return Boolean(this.dimensionTablesProgress);
+      default:
+        return false;
+    }
+  }
+
   render() {
     return html`
       <md-tabs class="tabs" @change=${this.handleTabChange}>
         ${TABS.map(tab => html`
           <md-primary-tab ?selected=${this.tab === tab}>
-            ${tab}
+            <span class="tab-label">
+              ${tab}
+              ${this.shouldShowSpinner(tab) ? html`
+                <x-circular-progress class="tab-spinner" size="16px"></x-circular-progress>
+              ` : ''}
+            </span>
           </md-primary-tab>
         `)}
       </md-tabs>
