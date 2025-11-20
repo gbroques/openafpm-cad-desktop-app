@@ -488,38 +488,18 @@
         const assemblyChanged = app.assembly !== previousAssembly;
         const parametersChanged = previousBody !== body;
         
-        console.log('handleVisualize called:');
-        console.log(`[TIMESTAMP] ${Date.now()} - handleVisualize called`);
-        console.log('  Current assembly:', app.assembly);
-        console.log('  Previous assembly:', previousAssembly);
-        console.log('  Assembly changed:', assemblyChanged);
-        console.log('  Parameters changed:', parametersChanged);
-        
         if (parametersChanged) {
-          console.log(`[TIMESTAMP] ${Date.now()} - Parameters changed - closing all connections`);
-          // Parameters changed - close ALL event sources and start all 3 new ones
           sseManager.closeAllEventSources();
-          
-          console.log(`[TIMESTAMP] ${Date.now()} - Starting new SSE connections after parameter change...`);
-          // Start all 3 SSE connections (backend handles blocking wait for cancellation)
           startVisualizationSSE(app.assembly, parameters);
           startCNCOverviewSSE(parameters);
           startDimensionTablesSSE(parameters);
-          
         } else if (assemblyChanged) {
-          console.log(`[TIMESTAMP] ${Date.now()} - Assembly changed only - closing visualize connection`);
-          // Only assembly changed - close only visualize
           sseManager.closeEventSourceContaining('visualize');
-          
-          // Start only visualization SSE
           startVisualizationSSE(app.assembly, parameters);
-        } else {
-          console.log(`[TIMESTAMP] ${Date.now()} - No changes detected`);
         }
         
         previousBody = body;
         previousAssembly = app.assembly;
-        console.log('Updated previousAssembly to:', previousAssembly);
       }
 
       let visualizationInitialized = false;
@@ -530,40 +510,27 @@
           visualizeProgress: { percent: 0, message: 'Starting...' }
         });
         
-        // Only call visualize() on first initialization
         if (!visualizationInitialized) {
           visualizationRoot.innerHTML = '';
-          
-          const loadObjText = () => new Promise(() => {}); // Never resolves, we'll handle completion via SSE
+          const loadObjText = () => new Promise(() => {});
           const furlTransformPromise = Promise.resolve(null);
-          
           openAfpmCadVisualization.visualize(loadObjText, assembly, furlTransformPromise);
           handleResize();
           visualizationInitialized = true;
-        } else {
-          // For assembly switches, just update progress to show we're loading the new assembly
-          if (app.visualizeProgress) {
-            openAfpmCadVisualization.setProgress(app.visualizeProgress.message, app.visualizeProgress.percent);
-          }
         }
         
         sseManager.startSSE(`/api/visualize/${assembly}/stream`, parameters, {
           onProgress: (message, progress) => {
-            console.log(`[TIMESTAMP] ${Date.now()} - Visualize progress: ${progress}% - ${message}`);
             setState({
               visualizeProgress: { percent: progress, message }
             });
-            
-            // Pass progress to visualization component
             openAfpmCadVisualization.setProgress(message, progress);
           },
           onComplete: (result) => {
-            console.log(`[TIMESTAMP] ${Date.now()} - Visualize completed:`, result);
             setState({ 
               visualizeProgress: null
             });
             
-            // Replace the loading with actual content
             visualizationRoot.innerHTML = '';
             const loadObjText = () => Promise.resolve(result.objText);
             const furlTransformPromise = Promise.resolve(result.furlTransform);
@@ -579,7 +546,7 @@
             };
           },
           onError: (error) => {
-            console.log(`[TIMESTAMP] ${Date.now()} - Visualize SSE error:`, error);
+            console.error('Visualize SSE error:', error);
             setState({ 
               errorMessage: error,
               visualizeProgress: null
@@ -608,7 +575,7 @@
             });
           },
           onError: (error) => {
-            console.log(`${stateKeys.data} SSE error:`, error);
+            console.error(`${stateKeys.data} SSE error:`, error);
             setState({ 
               [stateKeys.error]: error,
               [stateKeys.progress]: null
@@ -641,7 +608,6 @@
         const { selectedAssembly } = event.detail;
         if (app.assembly !== selectedAssembly) {
           setState({ assembly: selectedAssembly });
-          // Always trigger visualization when assembly changes
           debouncedVisualizeHandler();
         }
       });

@@ -29,17 +29,14 @@ export default class ProgressBar extends LitElement {
   `;
 
   render() {
-    const percentValue = this.percent || 0;
-    const progressMessage = this.message || 'Loading...';
+    const percent = this.percent || 0;
+    const message = this.message || 'Loading...';
     
     return html`
       <div class="progress-text">
-        ${progressMessage}${percentValue > 0 ? ` - ${percentValue}%` : ''}
+        ${message}${percent > 0 ? ` - ${percent}%` : ''}
       </div>
-      <md-linear-progress 
-        .value="${percentValue}" 
-        max="100">
-      </md-linear-progress>
+      <md-linear-progress .value="${percent}" max="100"></md-linear-progress>
     `;
   }
 }

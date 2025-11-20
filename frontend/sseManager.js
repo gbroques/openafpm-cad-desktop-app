@@ -84,8 +84,6 @@ export default class SSEManager {
         } catch (e) {
           console.warn('Failed to parse error event data:', event.data);
         }
-      } else {
-        console.log(`SSE ${endpoint} connection closed (readyState:`, eventSource.readyState, ')');
       }
       this.closeEventSource(endpoint);
     });
