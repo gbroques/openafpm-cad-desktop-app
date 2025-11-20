@@ -28,7 +28,7 @@ class ProgressBroadcaster:
         """Broadcast progress to all connected clients."""
         with self.lock:
             failed_callbacks = []
-            for callback in self.callbacks[:]:  # Copy to avoid modification during iteration
+            for callback in self.callbacks:
                 try:
                     callback(message, progress)
                 except Exception as e:
@@ -36,10 +36,9 @@ class ProgressBroadcaster:
                     failed_callbacks.append(callback)
             
             # Remove failed callbacks (disconnected clients)
-            for failed_callback in failed_callbacks:
-                if failed_callback in self.callbacks:
-                    self.callbacks.remove(failed_callback)
-                    logger.info(f"Removed failed callback, remaining: {len(self.callbacks)}")
+            if failed_callbacks:
+                self.callbacks = [cb for cb in self.callbacks if cb not in failed_callbacks]
+                logger.info(f"Removed {len(failed_callbacks)} failed callback(s), remaining: {len(self.callbacks)}")
     
     def get_callback_count(self) -> int:
         """Get number of active callbacks."""
