@@ -60,7 +60,7 @@ from .request_collapse import request_collapse, request_collapse_with_progress
 
 @request_collapse(key_generator=hash_parameters)
 def request_collapsed_load_all(
-    magnafpm_parameters, furling_parameters, user_parameters, progress_callback
+    magnafpm_parameters, furling_parameters, user_parameters
 ):
     return load_all(magnafpm_parameters, furling_parameters, user_parameters)
 
