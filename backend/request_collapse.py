@@ -180,8 +180,6 @@ def _join_loading_operation(entry, cache_key, progress_callback, request_id):
     """
     global _current_cache_key, _current_cache_entry
     
-    logger.info(f"[{request_id}] Cache WAIT: joining existing load for {cache_key[:8]}...")
-    
     # Add callback to existing broadcaster
     if progress_callback:
         entry["progress_broadcaster"].add_callback(progress_callback)
@@ -193,20 +191,15 @@ def _join_loading_operation(entry, cache_key, progress_callback, request_id):
     with release_lock_during_wait():
         event.wait()
     
-    logger.info(f"[{request_id}] Wait complete, checking result for {cache_key[:8]}...")
-    
     # Check if the entry we were waiting for was replaced (cancelled operation)
     if _current_cache_entry is None or _current_cache_entry.get("id") != waiting_for_id:
-        logger.info(f"[{request_id}] Cache entry was replaced, operation was cancelled")
         raise InterruptedError("Operation was cancelled")
     
     # Check if the operation failed and re-raise the exception
     if _current_cache_entry["status"] == "error":
         error = _current_cache_entry["error"]
-        logger.info(f"[{request_id}] Re-raising error from completed operation: {error}")
         # Clear cache if it was cancelled so new requests can start fresh
         if isinstance(error, InterruptedError):
-            logger.info(f"[{request_id}] Clearing cache entry for cancelled operation")
             _current_cache_key = None
             _current_cache_entry = None
         raise error
@@ -233,8 +226,6 @@ def request_collapse_with_progress(key_generator):
             old_event = None
             event = None
             progress_callback = kwargs.get('progress_callback')
-            
-            logger.info(f"[{request_id}] Request collapse with progress: cache_key={cache_key[:8]}... (current_key: {_current_cache_key[:8] if _current_cache_key else 'None'})")
             
             with _cache_lock:
                 # Check if we have a cached result for this exact key
@@ -285,21 +276,16 @@ def request_collapse_with_progress(key_generator):
                         old_event = _current_cache_entry["event"]
                     
                     # Clear old cache and start new loading
-                    logger.info(f"[{request_id}] Cache MISS: starting load_all for {cache_key[:8]}...")
+                    logger.info(f"[{request_id}] Cache MISS: starting new operation for {cache_key[:8]}...")
                     
-                    # Create new cancel event for this operation
-                    logger.info(f"[{request_id}] Creating new cancel event...")
+                    # Create new cancel event and broadcaster
                     cancel_event = threading.Event()
                     _current_cancel_event = cancel_event
                     
-                    # New execution - create broadcaster
-                    logger.info(f"[{request_id}] Creating broadcaster...")
                     broadcaster = ProgressBroadcaster()
                     if progress_callback:
                         broadcaster.add_callback(progress_callback)
-                        logger.info(f"[{request_id}] Added progress callback to broadcaster")
                     
-                    logger.info(f"[{request_id}] Setting up cache entry...")
                     event = threading.Event()
                     entry_id = str(uuid.uuid4())
                     _current_cache_key = cache_key
@@ -311,7 +297,6 @@ def request_collapse_with_progress(key_generator):
                         "cancel_event": cancel_event,
                         "result": None
                     }
-                    logger.info(f"[{request_id}] Cache entry created successfully")
             
             # Execute with progress broadcasting
             def broadcast_progress_wrapper(message: str, progress: int):
@@ -324,19 +309,13 @@ def request_collapse_with_progress(key_generator):
             cancel_event = _current_cache_entry["cancel_event"]
             
             try:
-                logger.info(f"[{request_id}] Executing load_all with progress for {cache_key[:8]}...")
-                logger.info(f"[{request_id}] Getting cancel event from cache entry...")
-                logger.info(f"[{request_id}] About to call load_all function...")
                 try:
                     # Override kwargs with broadcast wrapper and cancel event
                     func_kwargs = {**kwargs, 'progress_callback': broadcast_progress_wrapper, 'cancel_event': cancel_event}
                     result = func(*args, **func_kwargs)
-                    logger.info(f"[{request_id}] load_all completed successfully for {cache_key[:8]}...")
+                    logger.info(f"[{request_id}] Operation completed for {cache_key[:8]}")
                 except Exception as load_error:
-                    logger.error(f"[{request_id}] Error during load_all execution: {load_error}")
-                    logger.error(f"[{request_id}] Load error type: {type(load_error)}")
-                    import traceback
-                    logger.error(f"[{request_id}] Load traceback: {traceback.format_exc()}")
+                    logger.error(f"[{request_id}] Operation failed for {cache_key[:8]}: {load_error}")
                     raise
                 with _cache_lock:
                     # Only set status if cache entry still exists (might be cleared by another thread)
@@ -347,7 +326,6 @@ def request_collapse_with_progress(key_generator):
                     event.set()
                 return result
             except Exception as e:
-                logger.error(f"[{request_id}] load_all failed for {cache_key[:8]}...: {e}")
                 with _cache_lock:
                     # Only clear/update cache if it's still our entry (not replaced by new operation)
                     if _current_cache_key == cache_key and _current_cache_entry is not None:
