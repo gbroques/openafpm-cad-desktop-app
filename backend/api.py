@@ -255,8 +255,27 @@ def create_dxf_archive_endpoint(request: ParametersRequest):
 
 
 # SSE Helper
-async def create_sse_stream(request: Request, execute_func, *args, **kwargs):
-    """Generic SSE stream handler for progress updates."""
+async def create_sse_stream(request: Request, execute_func, *args, **kwargs) -> StreamingResponse:
+    """Generic SSE stream handler for progress updates.
+    
+    Creates a Server-Sent Events stream that executes a long-running function
+    and broadcasts progress updates to the client in real-time.
+    
+    Args:
+        request: FastAPI Request object for disconnect detection
+        execute_func: Async function to execute (must accept progress_callback kwarg)
+        *args: Positional arguments to pass to execute_func
+        **kwargs: Keyword arguments to pass to execute_func
+        
+    Returns:
+        StreamingResponse with text/event-stream media type
+        
+    Events:
+        progress: {"progress": int, "message": str} - Progress update (0-100)
+        complete: dict - Operation completed successfully with result
+        cancelled: {"message": str} - Operation was cancelled
+        error: {"error": str} - Operation failed with error
+    """
     async def event_stream():
         progress_queue = asyncio.Queue()
         client_disconnected = False
