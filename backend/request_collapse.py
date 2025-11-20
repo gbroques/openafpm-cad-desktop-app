@@ -175,7 +175,7 @@ def request_collapse_with_progress(key_generator):
                     if entry["status"] == "complete":
                         logger.info(f"[{request_id}] Cache HIT: returning cached result for {cache_key[:8]}...")
                         if progress_callback:
-                            progress_callback(100, "Using cached result")
+                            progress_callback("Using cached result", 100)
                         return entry["result"]
                     elif entry["status"] == "error":
                         logger.info(f"[{request_id}] Cache HIT: re-raising cached error for {cache_key[:8]}...")
@@ -249,7 +249,7 @@ def request_collapse_with_progress(key_generator):
                                     return _current_cache_entry["result"]
                                 elif entry["status"] == "complete":
                                     if progress_callback:
-                                        progress_callback(100, "Using cached result")
+                                        progress_callback("Using cached result", 100)
                                     return entry["result"]
                                 elif entry["status"] == "error":
                                     raise entry["error"]
