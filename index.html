@@ -292,9 +292,9 @@
 
       const sseManager = new SSEManager();
 
-      const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      const presetTheme = localStorage.getItem("theme") || preferredTheme;
-        document.documentElement.setAttribute("data-theme", presetTheme);
+      const preferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      const presetTheme = localStorage.getItem('theme') || preferredTheme;
+      document.documentElement.setAttribute('data-theme', presetTheme);
       const initialState = {
         preset: Preset.T_SHAPE,
         assembly: Assembly.WIND_TURBINE,
@@ -385,8 +385,8 @@
       app.addEventListener('toggle-theme', (event) => {
         const { theme } = event.detail;
         setState({ theme });
-        document.documentElement.setAttribute("data-theme", theme);
-        localStorage.setItem("theme", theme);
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
       });
 
       app.addEventListener('select-preset', (event) => {
