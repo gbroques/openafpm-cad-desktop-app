@@ -441,20 +441,49 @@
           startDimensionTablesSSE(parameters);
         } else if (assemblyChanged) {
           sseManager.closeEventSourceContaining('visualize');
-          startVisualizationSSE(app.assembly, parameters);
+          startVisualizationSSE(app.assembly, parameters, false);
         }
         
         previousBody = body;
         previousAssembly = app.assembly;
       }
 
-      function startVisualizationSSE(assembly, parameters) {
-        startSSEStream(`/api/visualize/${assembly}/stream`, {
-          error: 'visualizeErrorMessage',
-          data: 'visualize',
-          progress: 'visualizeProgress',
-          initialData: null
-        }, parameters);
+      function startVisualizationSSE(assembly, parameters, resetProgress = true) {
+        // Don't reset progress when only switching assemblies since they share
+        // the same load_all cache. Resetting causes jarring 0% -> actual% jump.
+        if (resetProgress) {
+          setState({ 
+            visualizeErrorMessage: '',
+            visualize: null,
+            visualizeProgress: { percent: 0, message: 'Starting...' }
+          });
+        } else {
+          setState({ 
+            visualizeErrorMessage: '',
+            visualize: null
+          });
+        }
+        
+        sseManager.startSSE(`/api/visualize/${assembly}/stream`, parameters, {
+          onProgress: (message, progress) => {
+            setState({
+              visualizeProgress: { percent: progress, message }
+            });
+          },
+          onComplete: (result) => {
+            setState({ 
+              visualizeProgress: null,
+              visualize: result
+            });
+          },
+          onError: (error) => {
+            console.error('visualize SSE error:', error);
+            setState({ 
+              visualizeProgress: null,
+              visualizeErrorMessage: error
+            });
+          }
+        });
       }
 
       function startSSEStream(endpoint, stateKeys, parameters) {
@@ -510,7 +539,10 @@
         const { selectedAssembly } = event.detail;
         if (app.assembly !== selectedAssembly) {
           setState({ assembly: selectedAssembly });
-          debouncedVisualizeHandler();
+          // Only re-visualize if we've already visualized before
+          if (app.visualize || app.visualizeProgress) {
+            debouncedVisualizeHandler();
+          }
         }
       });
       app.addEventListener('select-tab', (event) => {
