@@ -57,11 +57,6 @@ from openafpm_cad_core.app import (
 )
 from .request_collapse import request_collapse, request_collapse_with_progress
 
-# Progress range constants
-# load_all() uses 0-80% for CAD operations, reserving 80-100% for post-processing
-# (assembly conversion, OBJ generation, etc.)
-LOAD_ALL_PROGRESS_RANGE = (0, 80)
-
 
 @request_collapse(key_generator=hash_parameters)
 def request_collapsed_load_all(
@@ -79,7 +74,7 @@ def request_collapsed_load_all_with_progress(
         furling_parameters, 
         user_parameters, 
         progress_callback,
-        progress_range=LOAD_ALL_PROGRESS_RANGE,
+        progress_range=(0, 80),
         cancel_event=cancel_event
     )
 
