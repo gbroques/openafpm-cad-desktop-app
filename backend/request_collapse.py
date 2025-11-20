@@ -146,6 +146,59 @@ def request_collapse(key_generator):
         return wrapper
     return decorator
 
+def _join_loading_operation(entry, cache_key, progress_callback, request_id):
+    """
+    Join an existing loading operation and wait for its completion.
+    
+    Args:
+        entry: Cache entry dict with status="loading"
+        cache_key: Cache key for logging
+        progress_callback: Optional progress callback to add to broadcaster
+        request_id: Request ID for logging
+        
+    Returns:
+        Result from the completed operation
+        
+    Raises:
+        InterruptedError: If operation was cancelled
+        Exception: If operation failed with an error
+    """
+    global _current_cache_key, _current_cache_entry
+    
+    logger.info(f"[{request_id}] Cache WAIT: joining existing load for {cache_key[:8]}...")
+    
+    # Add callback to existing broadcaster
+    if progress_callback:
+        entry["progress_broadcaster"].add_callback(progress_callback)
+    
+    # Wait for completion
+    event = entry["event"]
+    waiting_for_id = entry["id"]
+    
+    _cache_lock.release()
+    event.wait()
+    _cache_lock.acquire()
+    
+    logger.info(f"[{request_id}] Wait complete, checking result for {cache_key[:8]}...")
+    
+    # Check if the entry we were waiting for was replaced (cancelled operation)
+    if _current_cache_entry is None or _current_cache_entry.get("id") != waiting_for_id:
+        logger.info(f"[{request_id}] Cache entry was replaced, operation was cancelled")
+        raise InterruptedError("Operation was cancelled")
+    
+    # Check if the operation failed and re-raise the exception
+    if _current_cache_entry["status"] == "error":
+        error = _current_cache_entry["error"]
+        logger.info(f"[{request_id}] Re-raising error from completed operation: {error}")
+        # Clear cache if it was cancelled so new requests can start fresh
+        if isinstance(error, InterruptedError):
+            logger.info(f"[{request_id}] Clearing cache entry for cancelled operation")
+            _current_cache_key = None
+            _current_cache_entry = None
+        raise error
+    
+    return _current_cache_entry["result"]
+
 def request_collapse_with_progress(key_generator):
     """
     Decorator factory that collapses multiple requests with progress broadcasting support.
@@ -182,37 +235,7 @@ def request_collapse_with_progress(key_generator):
                         logger.info(f"[{request_id}] Cache HIT: re-raising cached error for {cache_key[:8]}...")
                         raise entry["error"]
                     elif entry["status"] == "loading":
-                        logger.info(f"[{request_id}] Cache WAIT: joining existing load for {cache_key[:8]}...")
-                        # Add callback to existing broadcaster
-                        if progress_callback:
-                            entry["progress_broadcaster"].add_callback(progress_callback)
-                        # Wait for completion
-                        event = entry["event"]
-                        # Save ID of this specific entry to detect if it was replaced
-                        waiting_for_id = entry["id"]
-                        _cache_lock.release()
-                        event.wait()
-                        _cache_lock.acquire()
-                        logger.info(f"[{request_id}] Wait complete, checking result for {cache_key[:8]}...")
-                        
-                        # Check if the entry we were waiting for was replaced (cancelled operation)
-                        # This happens when parameters change and a new operation starts
-                        if _current_cache_entry is None or _current_cache_entry.get("id") != waiting_for_id:
-                            logger.info(f"[{request_id}] Cache entry was replaced, operation was cancelled")
-                            raise InterruptedError("Operation was cancelled")
-                        
-                        # Check if the operation failed and re-raise the exception
-                        if _current_cache_entry["status"] == "error":
-                            error = _current_cache_entry["error"]
-                            logger.info(f"[{request_id}] Re-raising error from completed operation: {error}")
-                            # Clear cache if it was cancelled so new requests can start fresh
-                            if isinstance(error, InterruptedError):
-                                logger.info(f"[{request_id}] Clearing cache entry for cancelled operation")
-                                _current_cache_key = None
-                                _current_cache_entry = None
-                            raise error
-                        
-                        return _current_cache_entry["result"]
+                        return _join_loading_operation(entry, cache_key, progress_callback, request_id)
                 else:
                     # Cancel any existing operation when parameters change
                     global _current_cancel_event
@@ -235,19 +258,7 @@ def request_collapse_with_progress(key_generator):
                                 logger.info(f"[{request_id}] Another thread created cache entry, joining...")
                                 entry = _current_cache_entry
                                 if entry["status"] == "loading":
-                                    if progress_callback:
-                                        entry["progress_broadcaster"].add_callback(progress_callback)
-                                    event = entry["event"]
-                                    waiting_for_id = entry["id"]
-                                    _cache_lock.release()
-                                    event.wait()
-                                    _cache_lock.acquire()
-                                    
-                                    if _current_cache_entry is None or _current_cache_entry.get("id") != waiting_for_id:
-                                        raise InterruptedError("Operation was cancelled")
-                                    if _current_cache_entry["status"] == "error":
-                                        raise _current_cache_entry["error"]
-                                    return _current_cache_entry["result"]
+                                    return _join_loading_operation(entry, cache_key, progress_callback, request_id)
                                 elif entry["status"] == "complete":
                                     if progress_callback:
                                         progress_callback("Using cached result", 100)
