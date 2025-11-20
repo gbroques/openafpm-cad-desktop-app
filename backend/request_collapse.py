@@ -1,8 +1,8 @@
 """
-Request Collapse Optimization for FreeCAD load_all() Operations
+Cancelable Singleflight Cache for FreeCAD load_all() Operations
 
-This module provides a decorator that collapses multiple concurrent requests with identical
-parameters into a single execution, preventing duplicate expensive operations.
+This module provides a decorator that implements a cancelable singleflight cache pattern,
+collapsing multiple concurrent requests with identical parameters into a single execution.
 
 How it works:
 1. Uses a key_generator function to generate unique cache keys from request parameters
@@ -18,6 +18,7 @@ Key characteristics:
 - Requests don't need to be simultaneous: Later requests with same parameters get cached results
 - Error propagation: Exceptions are cached and re-raised for waiting requests
 - Progress broadcasting: Multiple clients can receive progress updates from single execution
+- Cancelable: New requests with different parameters cancel old operations
 
 FreeCAD Global State Issue:
 - FreeCAD uses shared global document state that gets mutated by each load_all() call
@@ -34,14 +35,14 @@ Performance benefits:
 Usage:
     from openafpm_cad_core.app import load_all, hash_parameters
     
-    @request_collapse_with_progress(key_generator=hash_parameters)
-    def request_collapsed_load_all_with_progress(magnafpm_parameters, furling_parameters, user_parameters, progress_callback=None, cancel_event=None):
+    @cancelable_singleflight_cache(key_generator=hash_parameters)
+    def load_all_with_cache(magnafpm_parameters, furling_parameters, user_parameters, progress_callback=None, cancel_event=None):
         return load_all(magnafpm_parameters, furling_parameters, user_parameters, progress_callback, cancel_event)
     
     # Multiple concurrent calls with same parameters will collapse into one execution:
-    # Thread 1: request_collapsed_load_all_with_progress(params_a, params_b, params_c, callback1)  # Executes load_all()
-    # Thread 2: request_collapsed_load_all_with_progress(params_a, params_b, params_c, callback2)  # Waits for Thread 1
-    # Thread 3: request_collapsed_load_all_with_progress(params_a, params_b, params_c, callback3)  # Waits for Thread 1
+    # Thread 1: load_all_with_cache(params_a, params_b, params_c, callback1)  # Executes load_all()
+    # Thread 2: load_all_with_cache(params_a, params_b, params_c, callback2)  # Waits for Thread 1
+    # Thread 3: load_all_with_cache(params_a, params_b, params_c, callback3)  # Waits for Thread 1
     # All threads receive the same result, and all callbacks receive progress updates
 """
 
