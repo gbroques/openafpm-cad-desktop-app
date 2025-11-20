@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { Tab, Assembly } from "./enums.js";
-import OpenAfpmCadVisualization from "../node_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js";
+import OpenAfpmCadVisualization from "openafpm-cad-visualization";
 
 import "@material/web/tabs/primary-tab.js";
 import "@material/web/tabs/tabs.js";
