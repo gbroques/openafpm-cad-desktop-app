@@ -210,6 +210,35 @@ def request_collapse_with_progress(key_generator):
     """
     Decorator factory that collapses multiple requests with progress broadcasting support.
     
+    Cache Entry State Machine:
+    
+        NONE (no cache)
+          ↓
+        LOADING (operation in progress)
+          ↓
+        ┌─────────┬─────────┬─────────┐
+        ↓         ↓         ↓         ↓
+      COMPLETE  ERROR  CANCELLED  REPLACED
+        │         │         │         │
+        │         │         └─→ NONE  │
+        │         └───────────→ NONE  │
+        └─────────────────────────────┘
+                (cached until params change)
+    
+    State Transitions:
+    - NONE → LOADING: New request with different parameters
+    - LOADING → COMPLETE: Operation succeeds
+    - LOADING → ERROR: Operation fails (non-cancellation error)
+    - LOADING → CANCELLED: Operation cancelled (InterruptedError), clears to NONE
+    - LOADING → REPLACED: New request with different params cancels this one
+    - COMPLETE/ERROR → NONE: New request with different parameters clears cache
+    
+    Concurrent Request Handling:
+    - Same params + LOADING: Join existing operation, share progress updates
+    - Same params + COMPLETE: Return cached result immediately
+    - Same params + ERROR: Re-raise cached exception
+    - Different params + LOADING: Cancel old operation, wait for cleanup, start new
+    
     Args:
         key_generator: Function that takes *args (positional arguments only) and returns a cache key string
         
