@@ -48,6 +48,7 @@ Usage:
 import threading
 import uuid
 from functools import wraps
+from contextlib import contextmanager
 import logging
 
 from .progress_broadcaster import ProgressBroadcaster
@@ -61,6 +62,20 @@ _current_cache_key = None
 _current_cache_entry = None
 _current_cancel_event = None  # Track cancel event for active operation
 _cache_lock = threading.Lock()
+
+
+@contextmanager
+def release_lock_during_wait():
+    """Context manager that releases the cache lock during a wait operation.
+    
+    This allows other threads to acquire the lock while we're waiting for an event.
+    The lock is automatically re-acquired when the context exits.
+    """
+    _cache_lock.release()
+    try:
+        yield
+    finally:
+        _cache_lock.acquire()
 
 def request_collapse(key_generator):
     """
@@ -175,9 +190,8 @@ def _join_loading_operation(entry, cache_key, progress_callback, request_id):
     event = entry["event"]
     waiting_for_id = entry["id"]
     
-    _cache_lock.release()
-    event.wait()
-    _cache_lock.acquire()
+    with release_lock_during_wait():
+        event.wait()
     
     logger.info(f"[{request_id}] Wait complete, checking result for {cache_key[:8]}...")
     
@@ -248,9 +262,8 @@ def request_collapse_with_progress(key_generator):
                         old_event = _current_cache_entry.get("event") if _current_cache_entry else None
                         if old_event is not None:
                             logger.info(f"[{request_id}] Waiting for previous operation to cancel...")
-                            _cache_lock.release()
-                            old_event.wait()
-                            _cache_lock.acquire()
+                            with release_lock_during_wait():
+                                old_event.wait()
                             logger.info(f"[{request_id}] Previous operation cancelled, proceeding...")
                             
                             # After waiting, check if another thread already created a cache entry for our key
