@@ -59,6 +59,32 @@ from openafpm_cad_core.app import (
 from .request_collapse import cancelable_singleflight_cache
 
 
+def get_assembly_enum(assembly: str) -> Assembly:
+    """Convert assembly string to Assembly enum.
+    
+    Args:
+        assembly: Assembly name string (e.g., "WindTurbine")
+        
+    Returns:
+        Assembly enum value
+        
+    Raises:
+        HTTPException: If assembly name is invalid
+    """
+    mapping = {
+        "WindTurbine": Assembly.WIND_TURBINE,
+        "StatorMold": Assembly.STATOR_MOLD,
+        "RotorMold": Assembly.ROTOR_MOLD,
+        "MagnetJig": Assembly.MAGNET_JIG,
+        "CoilWinder": Assembly.COIL_WINDER,
+        "BladeTemplate": Assembly.BLADE_TEMPLATE,
+    }
+    result = mapping.get(assembly)
+    if not result:
+        raise HTTPException(status_code=400, detail="Invalid assembly type")
+    return result
+
+
 @cancelable_singleflight_cache(key_generator=hash_parameters)
 def load_all_with_cache(
     magnafpm_parameters, furling_parameters, user_parameters, progress_callback=None, cancel_event=None
@@ -314,10 +340,9 @@ async def dimension_tables_stream(request: Request):
     return await create_sse_stream(request, execute_dimension_tables_with_progress, parameters)
 
 
-async def execute_visualize_with_progress(assembly: str, parameters: dict, progress_callback):
+async def execute_visualize_with_progress(assembly: str, parameters: dict, progress_callback) -> dict | None:
     """Execute visualize operation with progress updates."""
     try:
-        logger.info(f"Starting execute_visualize_with_progress for assembly: {assembly}")
         loop = asyncio.get_event_loop()
         
         # Phase 1: load_all (0-80%)
@@ -325,19 +350,15 @@ async def execute_visualize_with_progress(assembly: str, parameters: dict, progr
         furling_parameters = parameters["furling"] 
         user_parameters = parameters["user"]
         
-        logger.info("Calling load_all_with_cache...")
         root_documents, spreadsheet_document = await loop.run_in_executor(
             None, 
             partial(load_all_with_cache, progress_callback=progress_callback),
             magnafpm_parameters, furling_parameters, user_parameters
         )
-        logger.info("load_all_with_cache completed")
         
         # Phase 2: Assembly processing (80-100%)
-        logger.info("Starting Phase 2 - Assembly processing")
         try:
             progress_callback(f"Processing {assembly} assembly...", 90)
-            logger.info("Progress callback 90% completed successfully")
         except Exception as e:
             logger.warning(f"Progress callback failed (likely cancelled): {e}")
     except InterruptedError:
@@ -347,52 +368,22 @@ async def execute_visualize_with_progress(assembly: str, parameters: dict, progr
         logger.error(f"Unexpected error in execute_visualize_with_progress: {e}")
         raise
     
-    try:
-        logger.info(f"Converting assembly string '{assembly}' to enum...")
-        assembly_enum = {
-            "WindTurbine": Assembly.WIND_TURBINE,
-            "StatorMold": Assembly.STATOR_MOLD,
-            "RotorMold": Assembly.ROTOR_MOLD,
-            "MagnetJig": Assembly.MAGNET_JIG,
-            "CoilWinder": Assembly.COIL_WINDER,
-            "BladeTemplate": Assembly.BLADE_TEMPLATE,
-        }.get(assembly)
-        
-        if not assembly_enum:
-            logger.error(f"Invalid assembly type: {assembly}")
-            raise HTTPException(status_code=400, detail="Invalid assembly type")
-            
-        logger.info(f"Assembly enum: {assembly_enum}")
-    except Exception as e:
-        logger.error(f"Assembly conversion failed: {e}")
-        raise HTTPException(status_code=400, detail="Invalid assembly type")
+    assembly_enum = get_assembly_enum(assembly)
     
-    logger.info(f"Getting assembly document for {assembly_enum.value}")
-    try:
-        # Use the same approach as the POST endpoint
-        assembly_index = list(Assembly).index(assembly_enum)
-        assembly_document = root_documents[assembly_index]
-        logger.info(f"Got assembly document at index {assembly_index}: {assembly_document}")
-    except (IndexError, KeyError) as e:
-        logger.error(f"Failed to get assembly document: {e}")
-        raise HTTPException(status_code=500, detail=f"Assembly document not found: {e}")
+    assembly_index = list(Assembly).index(assembly_enum)
+    assembly_document = root_documents[assembly_index]
     
     progress_callback(f"Converting {assembly} to OBJ...", 95)
-    logger.info(f"Converting {assembly} to OBJ...")
     obj_text = await loop.run_in_executor(
         None, get_assembly_to_obj, assembly_enum, assembly_document
     )
-    logger.info(f"OBJ conversion completed, length: {len(obj_text) if obj_text else 0}")
     
     furl_transform = None
     if assembly_enum == Assembly.WIND_TURBINE:
-        logger.info("Getting furl transform...")
         furl_transform = await loop.run_in_executor(
             None, get_furl_transform, assembly_document, spreadsheet_document
         )
-        logger.info(f"Furl transform completed: {furl_transform is not None}")
     
-    logger.info(f"Completed {assembly} visualization")
     try:
         progress_callback(f"Completed {assembly} visualization", 100)
     except Exception as e:
@@ -401,7 +392,7 @@ async def execute_visualize_with_progress(assembly: str, parameters: dict, progr
     return {"objText": obj_text, "furlTransform": furl_transform}
 
 
-async def execute_cnc_overview_with_progress(parameters: dict, progress_callback):
+async def execute_cnc_overview_with_progress(parameters: dict, progress_callback) -> dict | None:
     """Execute CNC overview operation with progress updates."""
     try:
         loop = asyncio.get_event_loop()
@@ -442,7 +433,7 @@ async def execute_cnc_overview_with_progress(parameters: dict, progress_callback
         raise
 
 
-async def execute_dimension_tables_with_progress(parameters: dict, progress_callback):
+async def execute_dimension_tables_with_progress(parameters: dict, progress_callback) -> dict | None:
     """Execute dimension tables operation with progress updates."""
     try:
         logger.info("Starting execute_dimension_tables_with_progress")
