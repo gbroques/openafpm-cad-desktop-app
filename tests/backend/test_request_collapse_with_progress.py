@@ -148,7 +148,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
         result = decorated("arg1", progress_callback=callback)
         
         self.assertEqual(result, "result")
-        callback.assert_called_once_with(100, "Using cached result")
+        callback.assert_called_once_with("Using cached result", 100)
     
     def test_exception_propagates_to_all_waiters(self):
         """Exception in wrapped function should propagate to all waiting requests."""
