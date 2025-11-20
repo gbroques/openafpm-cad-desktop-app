@@ -509,7 +509,7 @@
         } else if (assemblyChanged) {
           console.log(`[TIMESTAMP] ${Date.now()} - Assembly changed only - closing visualize connection`);
           // Only assembly changed - close only visualize
-          sseManager.closeVisualizeEventSource();
+          sseManager.closeEventSourceContaining('visualize');
           
           // Start only visualization SSE
           startVisualizationSSE(app.assembly, parameters);

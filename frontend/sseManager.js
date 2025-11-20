@@ -17,10 +17,11 @@ export default class SSEManager {
   }
 
   /**
-   * Close the visualize SSE connection by finding any endpoint containing '/api/visualize/'.
+   * Close SSE connection by finding any endpoint containing the specified fragment.
+   * @param {string} endpointFragment - Fragment to search for in endpoint URLs
    */
-  closeVisualizeEventSource() {
-    const key = Object.keys(this.#eventSourceByEndpoint).find(k => k.includes('/api/visualize/'));
+  closeEventSourceContaining(endpointFragment) {
+    const key = Object.keys(this.#eventSourceByEndpoint).find(k => k.includes(endpointFragment));
     if (key) {
       this.closeEventSource(key);
     }
