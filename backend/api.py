@@ -80,14 +80,27 @@ def request_collapsed_load_all_with_progress(
 
 
 def parse_prefixed_parameters(query_params: Dict[str, str]) -> Dict[str, Any]:
-    """Parse query parameters with dot notation and convert types."""
-    result = {}
+    """Parse query parameters with dot notation and convert types.
+    
+    Converts flat query parameters with dot notation (e.g., 'magnafpm.RotorDiskRadius')
+    into nested dictionaries with type conversion.
+    
+    Args:
+        query_params: Dictionary of query parameter key-value pairs
+        
+    Returns:
+        Nested dictionary with converted types. Example:
+        {'magnafpm': {'RotorDiskRadius': 200.0}, 'user': {'EnableFurling': True}}
+    """
+    result: Dict[str, Any] = {}
     
     for key, value in query_params.items():
         # Convert string values to appropriate types
-        converted_value = convert_query_param_type(value)
+        converted_value: Any = convert_query_param_type(value)
         
         if "." in key:
+            prefix: str
+            param_name: str
             prefix, param_name = key.split(".", 1)
             if prefix not in result:
                 result[prefix] = {}
@@ -98,8 +111,15 @@ def parse_prefixed_parameters(query_params: Dict[str, str]) -> Dict[str, Any]:
     return result
 
 
-def convert_query_param_type(value: str):
-    """Convert string query param to appropriate type."""
+def convert_query_param_type(value: str) -> Any:
+    """Convert string query param to appropriate type.
+    
+    Args:
+        value: String value from query parameter
+        
+    Returns:
+        Converted value as bool, int, float, or str
+    """
     # Try boolean
     if value.lower() in ('true', 'false'):
         return value.lower() == 'true'
