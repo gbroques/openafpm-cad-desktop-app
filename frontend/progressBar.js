@@ -34,7 +34,7 @@ export default class ProgressBar extends LitElement {
     
     return html`
       <div class="progress-text">
-        ${message}${percent > 0 ? ` - ${percent}%` : ''}
+        ${message} - ${percent}%
       </div>
       <md-linear-progress .value="${percent}" max="100"></md-linear-progress>
     `;
