@@ -272,7 +272,7 @@ async def create_sse_stream(request: Request, execute_func, *args, **kwargs) -> 
         
     Events:
         progress: {"progress": int, "message": str} - Progress update (0-100)
-        complete: dict - Operation completed successfully with result
+        complete: any - Operation completed successfully with result (dict, str, list, etc.)
         cancelled: {"message": str} - Operation was cancelled
         error: {"error": str} - Operation failed with error
     """
@@ -413,7 +413,7 @@ async def execute_visualize_with_progress(assembly: str, parameters: dict, progr
     return {"objText": obj_text, "furlTransform": furl_transform}
 
 
-async def execute_cnc_overview_with_progress(parameters: dict, progress_callback) -> dict | None:
+async def execute_cnc_overview_with_progress(parameters: dict, progress_callback) -> str | None:
     """Execute CNC overview operation with progress updates."""
     try:
         loop = asyncio.get_event_loop()
