@@ -56,7 +56,7 @@ from openafpm_cad_core.app import (
     get_freecad_archive,
     hash_parameters
 )
-from .request_collapse import cancelable_singleflight_cache
+from request_collapse import cancelable_singleflight_cache
 
 
 @cancelable_singleflight_cache(key_generator=hash_parameters)
