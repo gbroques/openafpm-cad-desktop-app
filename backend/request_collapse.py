@@ -129,8 +129,6 @@ def request_collapse(key_generator):
             
             try:
                 logger.info(f"[{request_id}] Executing load_all for {cache_key[:8]}...")
-                if clean_up is not None:
-                    clean_up()
                 result = func(*args, **kwargs)
                 logger.info(f"[{request_id}] load_all completed for {cache_key[:8]}...")
                 with _cache_lock:
