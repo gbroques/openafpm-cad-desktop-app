@@ -123,9 +123,12 @@ def _join_loading_operation(entry, cache_key, progress_callback, request_id):
     
     return _current_cache_entry["result"]
 
-def request_collapse_with_progress(key_generator):
+def cancelable_singleflight_cache(key_generator):
     """
-    Decorator factory that collapses multiple requests with progress broadcasting support.
+    Decorator factory that implements a cancelable singleflight cache pattern.
+    
+    Collapses multiple concurrent requests with identical parameters into a single execution,
+    with support for progress broadcasting and cancellation when parameters change.
     
     Cache Entry State Machine:
     

@@ -55,11 +55,11 @@ from openafpm_cad_core.app import (
     get_freecad_archive,
     hash_parameters
 )
-from .request_collapse import request_collapse_with_progress
+from .request_collapse import cancelable_singleflight_cache
 
 
-@request_collapse_with_progress(key_generator=hash_parameters)
-def request_collapsed_load_all(
+@cancelable_singleflight_cache(key_generator=hash_parameters)
+def load_all_with_cache(
     magnafpm_parameters, furling_parameters, user_parameters, progress_callback=None, cancel_event=None
 ):
     return load_all(
@@ -231,7 +231,7 @@ def visualize(assembly: str, request: ParametersRequest) -> dict:
     if not assembly_enum:
         raise HTTPException(status_code=400, detail="Invalid assembly type")
 
-    root_documents, spreadsheet_document = request_collapsed_load_all(
+    root_documents, spreadsheet_document = load_all_with_cache(
         magnafpm_parameters, furling_parameters, user_parameters
     )
 
@@ -253,7 +253,7 @@ def create_archive_endpoint(request: ParametersRequest):
     user_parameters = parameters["user"]
     furling_parameters = parameters["furling"]
 
-    root_documents, spreadsheet_document = request_collapsed_load_all(
+    root_documents, spreadsheet_document = load_all_with_cache(
         magnafpm_parameters, furling_parameters, user_parameters
     )
 
@@ -268,7 +268,7 @@ def get_cnc_overview(request: ParametersRequest) -> dict:
     furling_parameters = parameters["furling"]
     user_parameters = parameters["user"]
 
-    root_documents, spreadsheet_document = request_collapsed_load_all(
+    root_documents, spreadsheet_document = load_all_with_cache(
         magnafpm_parameters, furling_parameters, user_parameters
     )
 
@@ -283,7 +283,7 @@ def create_dxf_archive_endpoint(request: ParametersRequest):
     user_parameters = parameters["user"]
     furling_parameters = parameters["furling"]
 
-    root_documents, _ = request_collapsed_load_all(
+    root_documents, _ = load_all_with_cache(
         magnafpm_parameters, furling_parameters, user_parameters
     )
 
@@ -298,7 +298,7 @@ def get_dimension_tables_endpoint(request: ParametersRequest) -> dict:
     furling_parameters = parameters["furling"]
     user_parameters = parameters["user"]
 
-    root_documents, spreadsheet_document = request_collapsed_load_all(
+    root_documents, spreadsheet_document = load_all_with_cache(
         magnafpm_parameters, furling_parameters, user_parameters
     )
 
@@ -409,13 +409,13 @@ async def execute_visualize_with_progress(assembly: str, parameters: dict, progr
         furling_parameters = parameters["furling"] 
         user_parameters = parameters["user"]
         
-        logger.info("Calling request_collapsed_load_all...")
+        logger.info("Calling load_all_with_cache...")
         root_documents, spreadsheet_document = await loop.run_in_executor(
             None, 
-            partial(request_collapsed_load_all, progress_callback=progress_callback),
+            partial(load_all_with_cache, progress_callback=progress_callback),
             magnafpm_parameters, furling_parameters, user_parameters
         )
-        logger.info("request_collapsed_load_all completed")
+        logger.info("load_all_with_cache completed")
         
         # Phase 2: Assembly processing (80-100%)
         logger.info("Starting Phase 2 - Assembly processing")
@@ -497,7 +497,7 @@ async def execute_cnc_overview_with_progress(parameters: dict, progress_callback
         
         root_documents, spreadsheet_document = await loop.run_in_executor(
             None,
-            partial(request_collapsed_load_all, progress_callback=progress_callback),
+            partial(load_all_with_cache, progress_callback=progress_callback),
             
             magnafpm_parameters, furling_parameters, user_parameters
         )
@@ -539,7 +539,7 @@ async def execute_dimension_tables_with_progress(parameters: dict, progress_call
         
         root_documents, spreadsheet_document = await loop.run_in_executor(
             None,
-            partial(request_collapsed_load_all, progress_callback=progress_callback),
+            partial(load_all_with_cache, progress_callback=progress_callback),
             
             magnafpm_parameters, furling_parameters, user_parameters
         )

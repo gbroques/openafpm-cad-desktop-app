@@ -1,5 +1,5 @@
 """
-Comprehensive unit tests for request_collapse_with_progress decorator.
+Comprehensive unit tests for cancelable_singleflight_cache decorator.
 """
 
 import unittest
@@ -7,10 +7,10 @@ import threading
 import time
 from unittest.mock import Mock, call
 
-from backend.request_collapse import request_collapse_with_progress
+from backend.request_collapse import cancelable_singleflight_cache
 
 
-class TestRequestCollapseWithProgress(unittest.TestCase):
+class TestCancelableSingleflightCache(unittest.TestCase):
     
     def setUp(self):
         """Reset global cache state before each test."""
@@ -24,7 +24,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
         mock_func = Mock(return_value="result")
         key_gen = Mock(return_value="key1")
         
-        decorated = request_collapse_with_progress(key_gen)(mock_func)
+        decorated = cancelable_singleflight_cache(key_gen)(mock_func)
         result = decorated("arg1", "arg2")
         
         self.assertEqual(result, "result")
@@ -43,7 +43,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
             time.sleep(0.1)
             return "result"
         
-        decorated = request_collapse_with_progress(lambda *args: "key1")(slow_func)
+        decorated = cancelable_singleflight_cache(lambda *args: "key1")(slow_func)
         
         results = []
         def worker():
@@ -61,7 +61,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
     def test_sequential_requests_same_params_use_cache(self):
         """Sequential requests with same parameters should use cached result."""
         mock_func = Mock(return_value="result")
-        decorated = request_collapse_with_progress(lambda *args: "key1")(mock_func)
+        decorated = cancelable_singleflight_cache(lambda *args: "key1")(mock_func)
         
         result1 = decorated("arg1", "arg2")
         result2 = decorated("arg1", "arg2")
@@ -75,7 +75,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
         mock_func = Mock(side_effect=["result1", "result2"])
         key_gen = Mock(side_effect=["key1", "key2"])
         
-        decorated = request_collapse_with_progress(key_gen)(mock_func)
+        decorated = cancelable_singleflight_cache(key_gen)(mock_func)
         
         result1 = decorated("arg1")
         result2 = decorated("arg2")
@@ -93,7 +93,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
                 progress_callback("step3", 100)
             return "result"
         
-        decorated = request_collapse_with_progress(lambda *args: "key1")(func_with_progress)
+        decorated = cancelable_singleflight_cache(lambda *args: "key1")(func_with_progress)
         
         callback = Mock()
         result = decorated("arg1", progress_callback=callback)
@@ -117,7 +117,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
                 progress_callback("end", 100)
             return "result"
         
-        decorated = request_collapse_with_progress(lambda *args: "key1")(slow_func)
+        decorated = cancelable_singleflight_cache(lambda *args: "key1")(slow_func)
         
         callbacks = [Mock(), Mock(), Mock()]
         results = []
@@ -138,7 +138,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
     def test_cached_result_sends_immediate_progress(self):
         """Cached result should send immediate 100% progress."""
         mock_func = Mock(return_value="result")
-        decorated = request_collapse_with_progress(lambda *args: "key1")(mock_func)
+        decorated = cancelable_singleflight_cache(lambda *args: "key1")(mock_func)
         
         # First call to populate cache
         decorated("arg1")
@@ -156,7 +156,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
             time.sleep(0.05)
             raise ValueError("test error")
         
-        decorated = request_collapse_with_progress(lambda *args: "key1")(failing_func)
+        decorated = cancelable_singleflight_cache(lambda *args: "key1")(failing_func)
         
         exceptions = []
         
@@ -185,7 +185,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
             call_count += 1
             raise ValueError("test error")
         
-        decorated = request_collapse_with_progress(lambda *args: "key1")(failing_func)
+        decorated = cancelable_singleflight_cache(lambda *args: "key1")(failing_func)
         
         with self.assertRaises(ValueError):
             decorated("arg1")
@@ -207,7 +207,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
                 raise InterruptedError("cancelled")
             return "result"
         
-        decorated = request_collapse_with_progress(lambda *args: "key1")(func)
+        decorated = cancelable_singleflight_cache(lambda *args: "key1")(func)
         
         with self.assertRaises(InterruptedError):
             decorated("arg1")
@@ -229,7 +229,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
                 raise InterruptedError("cancelled")
             return f"result-{args[0]}"
         
-        decorated = request_collapse_with_progress(lambda *args: f"key-{args[0]}")(slow_func)
+        decorated = cancelable_singleflight_cache(lambda *args: f"key-{args[0]}")(slow_func)
         
         results = []
         exceptions = []
@@ -267,7 +267,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
             time.sleep(0.1)
             return f"result-{args[0]}"
         
-        decorated = request_collapse_with_progress(lambda *args: f"key-{args[0]}")(slow_func)
+        decorated = cancelable_singleflight_cache(lambda *args: f"key-{args[0]}")(slow_func)
         
         def worker1():
             results["worker1"] = decorated("param1")
@@ -308,7 +308,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
             received_cancel_event = cancel_event
             return "result"
         
-        decorated = request_collapse_with_progress(lambda *args: "key1")(func)
+        decorated = cancelable_singleflight_cache(lambda *args: "key1")(func)
         decorated("arg1")
         
         self.assertIsNotNone(received_cancel_event)
@@ -317,7 +317,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
     def test_no_progress_callback_works(self):
         """Function should work without progress callback."""
         mock_func = Mock(return_value="result")
-        decorated = request_collapse_with_progress(lambda *args: "key1")(mock_func)
+        decorated = cancelable_singleflight_cache(lambda *args: "key1")(mock_func)
         
         result = decorated("arg1")
         
@@ -332,7 +332,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
             time.sleep(0.1)
             return "result"
         
-        decorated = request_collapse_with_progress(lambda *args: "key1")(slow_func)
+        decorated = cancelable_singleflight_cache(lambda *args: "key1")(slow_func)
         
         exception_caught = False
         
@@ -376,7 +376,7 @@ class TestRequestCollapseWithProgress(unittest.TestCase):
             time.sleep(0.05)
             return f"result-{args[0]}"
         
-        decorated = request_collapse_with_progress(lambda *args: f"key-{args[0]}")(func)
+        decorated = cancelable_singleflight_cache(lambda *args: f"key-{args[0]}")(func)
         
         def worker1():
             results["worker1"] = decorated("param1")

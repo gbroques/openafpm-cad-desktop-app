@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Frontend Components</title>
+    <style>
+      :root {
+        --spacing: 8px;
+        --h6: 0.833rem;
+        --text-color: #000;
+        --md-sys-color-primary: #43A047;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .test-container {
+        max-width: 500px;
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+      }
+    </style>
+</head>
+<body>
+    <h1>Frontend Components Test</h1>
+    
+    <div class="test-container">
+        <h2>Progress Bar Component</h2>
+        <x-progress-bar id="test-progress" progress="45" message="Loading FreeCAD documents..."></x-progress-bar>
+        
+        <br><br>
+        <button onclick="updateProgress()">Update Progress</button>
+        <button onclick="testSSE()">Test SSE Utils</button>
+    </div>
+
+    <div class="test-container">
+        <h2>SSE Manager Test</h2>
+        <div id="sse-output"></div>
+    </div>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "lit": "./node_modules/lit/index.js",
+        "lit/": "./node_modules/lit/",
+        "@material/web/": "./node_modules/@material/web/"
+      }
+    }
+    </script>
+
+    <script type="module">
+        import "./frontend/progressBar.js";
+        import { SSEManager } from "./frontend/sseUtils.js";
+
+        let progress = 45;
+        const progressBar = document.getElementById('test-progress');
+        const output = document.getElementById('sse-output');
+
+        window.updateProgress = () => {
+            progress = (progress + 15) % 100;
+            progressBar.progress = progress;
+            progressBar.message = `Progress at ${progress}%`;
+        };
+
+        window.testSSE = () => {
+            const sseManager = new SSEManager();
+            output.innerHTML = '<p>SSE Manager created successfully!</p>';
+            
+            // Test URL building
+            const testParams = {
+                magnafpm: { RotorDiskRadius: 150, NumberMagnet: 12 },
+                furling: { Offset: 125 },
+                user: { BladeWidth: 124 }
+            };
+            
+            const url = sseManager.buildSSEUrl('/api/test/stream', testParams);
+            output.innerHTML += `<p>Built URL: ${url}</p>`;
+            
+            // Test connection management
+            output.innerHTML += '<p>Testing connection management...</p>';
+            sseManager.closeAllEventSources();
+            output.innerHTML += '<p>✓ Connection management works</p>';
+        };
+
+        console.log('Frontend test loaded successfully');
+    </script>
+</body>
+</html>
