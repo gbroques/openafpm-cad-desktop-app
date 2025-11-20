@@ -1,5 +1,6 @@
-import { LitElement, html, css } from "lit";
+import { LitElement, html } from "lit";
 import { Tab, Assembly } from "./enums.js";
+import OpenAfpmCadVisualization from "../node_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js";
 
 import "@material/web/tabs/primary-tab.js";
 import "@material/web/tabs/tabs.js";
@@ -19,6 +20,13 @@ import "./typography.js";
 const TABS = [Tab.INPUTS, Tab.VISUALIZE, Tab.CNC, Tab.DIMENSIONS];
 
 export default class App extends LitElement {
+  // Disable shadow DOM - render directly into light DOM
+  // This allows openafpm-cad-visualization's styles (injected into <head>) to work
+  // without shadow DOM boundaries blocking them
+  createRenderRoot() {
+    return this;
+  }
+  
   static properties = {
     preset: { type: String },
     parametersByPreset: { attribute: false },
@@ -38,100 +46,92 @@ export default class App extends LitElement {
     dimensionTablesErrorMessage: { type: String },
     dimensionTables: { attribute: false },
     dimensionTablesProgress: { attribute: false },
+    visualize: { attribute: false },
     visualizeProgress: { attribute: false },
-    shapeBounds: { attribute: false }
+    visualizeErrorMessage: { type: String },
+    shapeBounds: { attribute: false },
+    theme: { type: String }
   };
-  static styles = css`
-    :host {
-      display: grid;
-      grid-template-rows: min-content 1fr;
-    }
-    .visualizationTabContents {
-      display: flex;
-      width: 100%;
-      height: 100%;
-    }
-    .cncOverviewContainer {
-      background-color: black;
-      padding: calc(var(--spacing) * 2);
-      & > svg {
-        width: 100%;
-        height: 100%;
-      }
-    }
-    .centeredContainer {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      height: 100%;
-      align-items: center;
-      justify-content: center;
-    }
-    .slot {
-      display: block;
-      width: calc(100% - var(--navigation-rail-width));
-    }
-    .tabs {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-    .tab-label {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-    }
-    .tab-spinner {
-      position: absolute;
-      right: calc(var(--spacing) * -3);
-      width: 16px;
-      height: 16px;
-    }
-    @media print {
-      .tabs {
-        display: none;
-      }
-    }
-    /**********************************************************
-     * Table styles                                           *
-     **********************************************************/
-    .dimensionTablesContainer table {
-      border-collapse: collapse;
-      break-inside: avoid-page;
-    }
-    .dimensionTablesContainer > * {
-      margin-bottom: calc(var(--spacing) * 2);
-    }
-    .dimensionTablesContainer td, .dimensionTablesContainer th {
-      border: 1px solid var(--text-color);
-      padding: calc(var(--spacing) / 2) var(--spacing);
-      transition: border-color var(--transition-duration-standard) ease-in-out;
-    }
-    .dimensionTablesContainer th {
-      text-align: left;
-      text-transform: uppercase;
-    }
-    .dimensionTablesContainer tfoot td {
-      border: none;
-    }
-    .dimensionTablesContainer img {
-        max-width: 480px;
-    }
-    /**********************************************************/
-  `;
+  
+  firstUpdated() {
+    const visualizationRoot = this.renderRoot.querySelector('#visualization-root');
+    this._openAfpmCadVisualization = new OpenAfpmCadVisualization({
+      rootDomElement: visualizationRoot,
+      width: this._calculateWidth(),
+      height: this._calculateHeight()
+    });
+  }
   updated(changedProperties) {
     if (changedProperties.has('dimensionTables') && !changedProperties.get('dimensionTables') && this.dimensionTables) {
-      const container = this.shadowRoot.querySelector('.dimensionTablesContainer');
+      const container = this.querySelector('.dimensionTablesContainer');
       for (const element of this.dimensionTables) {
         // schedule macrotask to avoid blocking main thread
         setTimeout(() => container.append(render(element)));
       }
     }
+    
+    if (changedProperties.has('visualizeProgress') && this.visualizeProgress && this._openAfpmCadVisualization) {
+      const {message, percent} = this.visualizeProgress;
+      this._openAfpmCadVisualization.setProgress(message, percent);
+    }
+    
+    if (!this._openAfpmCadVisualization) return;
+    
+    if (changedProperties.has('visualize') && this.visualize) {
+      const {objText, furlTransform} = this.visualize;
+      this._openAfpmCadVisualization.render(objText, this.assembly, furlTransform);
+      
+      // Remove old listener and add new one with updated handleMouseMove reference
+      if (this._mouseMoveHandler) {
+        window.removeEventListener('mousemove', this._mouseMoveHandler);
+      }
+      this._mouseMoveHandler = (event) => {
+        this._openAfpmCadVisualization.handleMouseMove(event);
+      };
+      window.addEventListener('mousemove', this._mouseMoveHandler);
+    }
+    
+    if (changedProperties.has('visualizeErrorMessage') && this.visualizeErrorMessage) {
+      this._openAfpmCadVisualization.showError(this.visualizeErrorMessage);
+    }
+    
+    if ((changedProperties.has('tab') || changedProperties.has('assembly')) && this.tab === Tab.VISUALIZE) {
+      this._handleResize();
+    }
+  }
+  _handleResize() {
+    if (this.tab === Tab.VISUALIZE && this._openAfpmCadVisualization) {
+      const visualizationRoot = this.renderRoot.querySelector('#visualization-root');
+      if (visualizationRoot) {
+        const width = this._calculateWidth();
+        const height = this._calculateHeight();
+        this._openAfpmCadVisualization.resize(width, height);
+      }
+    }
+  }
+  _calculateWidth() {
+    const navigationRailWidth = parseInt(getComputedStyle(document.documentElement)
+      .getPropertyValue('--navigation-rail-width'));
+    return document.documentElement.clientWidth - navigationRailWidth;
+  }
+  _calculateHeight() {
+    const headerHeight = this.renderRoot.querySelector('header').offsetHeight;
+    const tabsHeight = this.renderRoot.querySelector('md-tabs').offsetHeight;
+    const offsetHeight = headerHeight + tabsHeight;
+    return window.innerHeight - offsetHeight;
   }
   handleTabChange(event) {
     const selectedTab = TABS[event.target.activeTabIndex];
     this.dispatchEvent(new CustomEvent('select-tab', {
       detail: { selectedTab },
+      bubbles: true,
+      composed: true
+    }));
+  }
+  handleThemeToggle() {
+    const targetTheme = this.theme === "light" ? "dark" : "light";
+    this.dispatchEvent(new CustomEvent('toggle-theme', {
+      detail: { theme: targetTheme },
       bubbles: true,
       composed: true
     }));
@@ -172,6 +172,10 @@ export default class App extends LitElement {
 
   render() {
     return html`
+      <header>
+        OpenAFPM CAD
+        <x-theme-toggle theme=${this.theme} @click=${this.handleThemeToggle}></x-theme-toggle>
+      </header>
       <md-tabs class="tabs" @change=${this.handleTabChange}>
         ${TABS.map(tab => html`
           <md-primary-tab ?selected=${this.tab === tab}>
@@ -231,7 +235,9 @@ export default class App extends LitElement {
                 Blade Template
             </x-navigation-rail-button>
           </x-navigation-rail>
-          <slot class="slot"></slot>
+          <div id="visualization-root" data-theme=${this.theme || 'light'}>
+            <x-empty-state></x-empty-state>
+          </div>
           <x-download-button
             title="Download FreeCAD files"
             ?loading=${this.archiveLoading}

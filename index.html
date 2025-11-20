@@ -193,24 +193,13 @@
         transition: var(--transition-duration-standard) ease-in-out;
         margin: 0;
         font-family: var(--font-family);
-        display: grid;
-        grid-template-rows: min-content 1fr;
       }
       html, body {
         height: 100%;
       }
-      header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background-color: var(--primary-color-main);
-        color: var(--background-default);
-        font-size: 1rem;
-        font-weight: bold;
-        padding: calc(var(--spacing) * 2);
-        position: relative;
-        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
-        transition: var(--transition-duration-standard) ease-in-out;
+      x-app {
+        display: grid;
+        height: 100%;
       }
       .container {
         width: 100%;
@@ -247,20 +236,11 @@
     </style>
 </head>
 <body>
-  <header>
-    OpenAFPM CAD
-    <x-theme-toggle></x-theme-toggle>
-  </header>
-  <x-app>
-    <div id="visualization-root" style="width: 100%; height: 100%">
-      <x-empty-state>
-        <div class="container">
-          <div id="loading-spinner"></div>
-          <p>Loading</p>
-        </div>
-      </x-empty-state>
-    </div>
-  </x-app>
+  <div id="initial-loading" class="container">
+    <div id="loading-spinner"></div>
+    <p>Loading</p>
+  </div>
+  <x-app></x-app>
   <script type="importmap">
     {
       "imports": {
@@ -282,57 +262,44 @@
 
     document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
   </script> 
-  <script type="module" src="./frontend/themeToggle.js"></script>
+  <link rel="stylesheet" href="./frontend/app.css">
+  <script type="module" src="./frontend/themeToggle.js"></script></script>
   <script type="module" src="./frontend/app.js"></script>
   <script>
-    // Setup theme toggle.
-    const themeToggle = document.querySelector("x-theme-toggle");
-    const visualizationRoot = document.getElementById("visualization-root");
-    const setTheme = theme => {
-      themeToggle.setAttribute("theme", theme);
-      document.documentElement.setAttribute("data-theme", theme);
-      visualizationRoot.setAttribute("data-theme", theme);
-    };
-    const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    const presetTheme = localStorage.getItem("theme") || preferredTheme;
-    if (presetTheme) setTheme(presetTheme);
-    themeToggle.addEventListener("click", () => {
-      const currentTheme = document.documentElement.getAttribute("data-theme");
-      const targetTheme = currentTheme === "light" ? "dark" : "light";
-      setTheme(targetTheme);
-      localStorage.setItem("theme", targetTheme);
-    });
 
     // Setup app.
     window.addEventListener("load", handleLoad);
     function handleLoad() {
-      document.getElementById("loading-spinner").remove();
-      const openAfpmCadVisualizationPromise = import(
-        "./node_modules/openafpm-cad-visualization/public/openafpm-cad-visualization.js"
-      );
+      const initialLoading = document.getElementById('initial-loading');
+      if (initialLoading) {
+        initialLoading.remove();
+      }
+      
       const enumsPromise = import("./frontend/enums.js");
       const groupParametersPromise = import("./frontend/groupParameters.js");
       const sseUtilsPromise = import("./frontend/sseManager.js");
-      Promise.all([openAfpmCadVisualizationPromise, enumsPromise, groupParametersPromise, sseUtilsPromise])
+      Promise.all([enumsPromise, groupParametersPromise, sseUtilsPromise])
         .then(setup);
     }
     function setup([
-      {default: OpenAfpmCadVisualization},
       enums,
       {default: groupParameters},
       {default: SSEManager}
     ]) {
       const { Tab, Preset, Assembly } = enums;
       const app = document.querySelector("x-app");
-
       const buildRequestBody = (form, parameters) => JSON.stringify(groupParameters(form, parameters));
 
       const sseManager = new SSEManager();
 
+      const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      const presetTheme = localStorage.getItem("theme") || preferredTheme;
+        document.documentElement.setAttribute("data-theme", presetTheme);
       const initialState = {
         preset: Preset.T_SHAPE,
         assembly: Assembly.WIND_TURBINE,
         tab: Tab.INPUTS,
+        theme: presetTheme,
         parametersByPreset: null,
         parametersSchemaByPreset: null, 
         form: null,
@@ -349,6 +316,8 @@
         dimensionTables: null,
         dimensionTablesProgress: null,
         visualizeProgress: null,
+        visualizeErrorMessage: '',
+        visualize: null,
         shapeBounds: {
           h_shape_lower_bound: 0,
           star_shape_lower_bound: 0
@@ -413,6 +382,13 @@
         setState({ errorMessage: '' });
       });
 
+      app.addEventListener('toggle-theme', (event) => {
+        const { theme } = event.detail;
+        setState({ theme });
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("theme", theme);
+      });
+
       app.addEventListener('select-preset', (event) => {
         const { selectedPreset } = event.detail;
         setState({ preset: selectedPreset });
@@ -449,40 +425,10 @@
         }
       });
 
-      function calculateWidth() {
-        // Get the width of document (without the scrollbar) minus navigation rail width.
-        const navigationRailWidth = parseInt(getComputedStyle(document.documentElement)
-          .getPropertyValue('--navigation-rail-width'));
-        return document.documentElement.clientWidth - navigationRailWidth;
-      }
-      function calculateHeight() {
-        const headerHeight = document.querySelector('header').offsetHeight;
-        const tabsHeight = app.renderRoot.querySelector('md-tabs').offsetHeight;
-        const offsetHeight = headerHeight + tabsHeight;
-        return window.innerHeight - offsetHeight;
-      }
-
-      let cleanUp = null;
       let previousBody = null;
-      const openAfpmCadVisualization = new OpenAfpmCadVisualization({
-        rootDomElement: visualizationRoot,
-        width: calculateWidth(),
-        height: calculateHeight()
-      });
-      const handleResize = () => {
-        if (app.tab === Tab.VISUALIZE) {
-          const width = calculateWidth();
-          const height = calculateHeight();
-          visualizationRoot.style.height = height + 'px';
-          openAfpmCadVisualization.resize(width, height);
-        }
-      };
-      window.addEventListener('resize', handleResize, false);
       let previousAssembly = app.assembly; // Initialize to current assembly
       
       function handleVisualize() {
-        if (cleanUp) cleanUp();
-        
         const body = buildRequestBody(app.form, app.parametersByPreset[app.preset]);
         const parameters = groupParameters(app.form, app.parametersByPreset[app.preset]);
         const assemblyChanged = app.assembly !== previousAssembly;
@@ -502,57 +448,13 @@
         previousAssembly = app.assembly;
       }
 
-      let visualizationInitialized = false;
-      
       function startVisualizationSSE(assembly, parameters) {
-        setState({ 
-          errorMessage: '',
-          visualizeProgress: { percent: 0, message: 'Starting...' }
-        });
-        
-        if (!visualizationInitialized) {
-          visualizationRoot.innerHTML = '';
-          const loadObjText = () => new Promise(() => {});
-          const furlTransformPromise = Promise.resolve(null);
-          openAfpmCadVisualization.visualize(loadObjText, assembly, furlTransformPromise);
-          handleResize();
-          visualizationInitialized = true;
-        }
-        
-        sseManager.startSSE(`/api/visualize/${assembly}/stream`, parameters, {
-          onProgress: (message, progress) => {
-            setState({
-              visualizeProgress: { percent: progress, message }
-            });
-            openAfpmCadVisualization.setProgress(message, progress);
-          },
-          onComplete: (result) => {
-            setState({ 
-              visualizeProgress: null
-            });
-            
-            visualizationRoot.innerHTML = '';
-            const loadObjText = () => Promise.resolve(result.objText);
-            const furlTransformPromise = Promise.resolve(result.furlTransform);
-            
-            openAfpmCadVisualization.visualize(loadObjText, assembly, furlTransformPromise);
-            handleResize();
-            
-            const handleMouseMove = (event) => openAfpmCadVisualization.handleMouseMove(event);
-            window.addEventListener('mousemove', handleMouseMove, false);
-            
-            cleanUp = () => {
-              window.removeEventListener('mousemove', handleMouseMove);
-            };
-          },
-          onError: (error) => {
-            console.error('Visualize SSE error:', error);
-            setState({ 
-              errorMessage: error,
-              visualizeProgress: null
-            });
-          }
-        });
+        startSSEStream(`/api/visualize/${assembly}/stream`, {
+          error: 'visualizeErrorMessage',
+          data: 'visualize',
+          progress: 'visualizeProgress',
+          initialData: null
+        }, parameters);
       }
 
       function startSSEStream(endpoint, stateKeys, parameters) {
@@ -616,8 +518,10 @@
         setState({ tab: selectedTab });
         // resize as a macro-task to ensure DAT GUI
         // is visible before setting its top position.
-        setTimeout(handleResize);
+        setTimeout(() => app._handleResize());
       });
+      
+      window.addEventListener('resize', () => app._handleResize(), false);
 
       /**
        * Import
