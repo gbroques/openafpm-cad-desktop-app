@@ -46,6 +46,7 @@ Usage:
 """
 
 import threading
+import uuid
 from functools import wraps
 import logging
 
@@ -187,16 +188,16 @@ def request_collapse_with_progress(key_generator):
                             entry["progress_broadcaster"].add_callback(progress_callback)
                         # Wait for completion
                         event = entry["event"]
-                        # Save reference to this specific entry to detect if it was cleared
-                        waiting_for_entry = entry
+                        # Save ID of this specific entry to detect if it was replaced
+                        waiting_for_id = entry["id"]
                         _cache_lock.release()
                         event.wait()
                         _cache_lock.acquire()
                         logger.info(f"[{request_id}] Wait complete, checking result for {cache_key[:8]}...")
                         
-                        # Check if the entry we were waiting for was cleared (cancelled operation)
+                        # Check if the entry we were waiting for was replaced (cancelled operation)
                         # This happens when parameters change and a new operation starts
-                        if _current_cache_entry is not waiting_for_entry:
+                        if _current_cache_entry is None or _current_cache_entry.get("id") != waiting_for_id:
                             logger.info(f"[{request_id}] Cache entry was replaced, operation was cancelled")
                             raise InterruptedError("Operation was cancelled")
                         
@@ -237,12 +238,12 @@ def request_collapse_with_progress(key_generator):
                                     if progress_callback:
                                         entry["progress_broadcaster"].add_callback(progress_callback)
                                     event = entry["event"]
-                                    waiting_for_entry = entry
+                                    waiting_for_id = entry["id"]
                                     _cache_lock.release()
                                     event.wait()
                                     _cache_lock.acquire()
                                     
-                                    if _current_cache_entry is not waiting_for_entry:
+                                    if _current_cache_entry is None or _current_cache_entry.get("id") != waiting_for_id:
                                         raise InterruptedError("Operation was cancelled")
                                     if _current_cache_entry["status"] == "error":
                                         raise _current_cache_entry["error"]
@@ -276,8 +277,10 @@ def request_collapse_with_progress(key_generator):
                     
                     logger.info(f"[{request_id}] Setting up cache entry...")
                     event = threading.Event()
+                    entry_id = str(uuid.uuid4())
                     _current_cache_key = cache_key
                     _current_cache_entry = {
+                        "id": entry_id,
                         "status": "loading",
                         "event": event,
                         "progress_broadcaster": broadcaster,
