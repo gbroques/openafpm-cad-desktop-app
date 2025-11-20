@@ -19,7 +19,6 @@ import time
 import json
 import asyncio
 import ast
-import queue
 import threading
 from functools import partial
 from typing import Dict, Any
@@ -259,18 +258,22 @@ def create_dxf_archive_endpoint(request: ParametersRequest):
 async def create_sse_stream(request: Request, execute_func, *args, **kwargs):
     """Generic SSE stream handler for progress updates."""
     async def event_stream():
-        progress_queue = queue.Queue()
+        progress_queue = asyncio.Queue()
         client_disconnected = False
+        loop = asyncio.get_event_loop()
         
         def progress_callback(message: str, progress: int):
             if client_disconnected:
                 return
             try:
-                progress_queue.put({
-                    "progress": progress, 
-                    "message": message
-                }, block=False)
-            except queue.Full:
+                asyncio.run_coroutine_threadsafe(
+                    progress_queue.put({
+                        "progress": progress, 
+                        "message": message
+                    }),
+                    loop
+                )
+            except Exception:
                 pass
         
         task = asyncio.create_task(
@@ -285,18 +288,17 @@ async def create_sse_stream(request: Request, execute_func, *args, **kwargs):
                     return
                 
                 try:
-                    progress_data = progress_queue.get(block=False)
+                    progress_data = await asyncio.wait_for(progress_queue.get(), timeout=0.1)
                     yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
-                except queue.Empty:
-                    await asyncio.sleep(0.1)
+                except asyncio.TimeoutError:
                     continue
             
             # Drain remaining progress updates
-            while True:
+            while not progress_queue.empty():
                 try:
-                    progress_data = progress_queue.get(block=False)
+                    progress_data = progress_queue.get_nowait()
                     yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
-                except queue.Empty:
+                except asyncio.QueueEmpty:
                     break
             
             result = await task
