@@ -300,13 +300,9 @@ def get_dimension_tables_endpoint(request: ParametersRequest) -> dict:
     return {"tables": tables}
 
 
-# SSE Endpoints
-@app.get("/api/visualize/{assembly}/stream")
-async def visualize_stream(assembly: str, request: Request):
-    """SSE endpoint for visualize with real-time progress updates."""
-    query_params = dict(request.query_params)
-    parameters = parse_prefixed_parameters(query_params)
-    
+# SSE Helper
+async def create_sse_stream(request: Request, execute_func, *args, **kwargs):
+    """Generic SSE stream handler for progress updates."""
     async def event_stream():
         progress_queue = queue.Queue()
         client_disconnected = False
@@ -323,12 +319,11 @@ async def visualize_stream(assembly: str, request: Request):
                 pass
         
         task = asyncio.create_task(
-            execute_visualize_with_progress(assembly, parameters, progress_callback)
+            execute_func(*args, progress_callback=progress_callback, **kwargs)
         )
         
         try:
             while not task.done():
-                # Check if client disconnected
                 if await request.is_disconnected():
                     client_disconnected = True
                     task.cancel()
@@ -341,7 +336,7 @@ async def visualize_stream(assembly: str, request: Request):
                     await asyncio.sleep(0.1)
                     continue
             
-            # Get any remaining progress updates
+            # Drain remaining progress updates
             while True:
                 try:
                     progress_data = progress_queue.get(block=False)
@@ -354,7 +349,6 @@ async def visualize_stream(assembly: str, request: Request):
             if result is not None:
                 yield f"event: complete\ndata: {json.dumps(result)}\n\n"
             else:
-                # Operation was cancelled - send explicit cancellation event
                 yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
             
         except asyncio.CancelledError:
@@ -367,136 +361,28 @@ async def visualize_stream(assembly: str, request: Request):
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
     
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+# SSE Endpoints
+@app.get("/api/visualize/{assembly}/stream")
+async def visualize_stream(assembly: str, request: Request):
+    """SSE endpoint for visualize with real-time progress updates."""
+    parameters = parse_prefixed_parameters(dict(request.query_params))
+    return await create_sse_stream(request, execute_visualize_with_progress, assembly, parameters)
 
 
 @app.get("/api/getcncoverview/stream")
 async def cnc_overview_stream(request: Request):
     """SSE endpoint for CNC overview with real-time progress updates."""
-    query_params = dict(request.query_params)
-    parameters = parse_prefixed_parameters(query_params)
-    
-    async def event_stream():
-        progress_queue = queue.Queue()
-        client_disconnected = False
-        
-        def progress_callback(message: str, progress: int):
-            if client_disconnected:
-                return
-            try:
-                progress_queue.put({
-                    "progress": progress, 
-                    "message": message
-                }, block=False)
-            except queue.Full:
-                pass
-        
-        task = asyncio.create_task(
-            execute_cnc_overview_with_progress(parameters, progress_callback)
-        )
-        
-        try:
-            while not task.done():
-                if await request.is_disconnected():
-                    client_disconnected = True
-                    task.cancel()
-                    return
-                
-                try:
-                    progress_data = progress_queue.get(block=False)
-                    yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
-                except queue.Empty:
-                    await asyncio.sleep(0.1)
-                    continue
-            
-            while True:
-                try:
-                    progress_data = progress_queue.get(block=False)
-                    yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
-                except queue.Empty:
-                    break
-            
-            result = await task
-            
-            if result is not None:
-                yield f"event: complete\ndata: {json.dumps(result)}\n\n"
-            else:
-                yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
-            
-        except asyncio.CancelledError:
-            logger.info("SSE stream cancelled by client disconnect")
-            yield f"event: cancelled\ndata: {json.dumps({'message': 'Client disconnected'})}\n\n"
-        except InterruptedError:
-            yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
-        except Exception as e:
-            logger.error(f"SSE stream error: {e}")
-            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
-    
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+    parameters = parse_prefixed_parameters(dict(request.query_params))
+    return await create_sse_stream(request, execute_cnc_overview_with_progress, parameters)
 
 
 @app.get("/api/getdimensiontables/stream")
 async def dimension_tables_stream(request: Request):
     """SSE endpoint for dimension tables with real-time progress updates."""
-    query_params = dict(request.query_params)
-    parameters = parse_prefixed_parameters(query_params)
-    
-    async def event_stream():
-        progress_queue = queue.Queue()
-        client_disconnected = False
-        
-        def progress_callback(message: str, progress: int):
-            if client_disconnected:
-                return
-            try:
-                progress_queue.put({
-                    "progress": progress, 
-                    "message": message
-                }, block=False)
-            except queue.Full:
-                pass
-        
-        task = asyncio.create_task(
-            execute_dimension_tables_with_progress(parameters, progress_callback)
-        )
-        
-        try:
-            while not task.done():
-                if await request.is_disconnected():
-                    client_disconnected = True
-                    task.cancel()
-                    return
-                
-                try:
-                    progress_data = progress_queue.get(block=False)
-                    yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
-                except queue.Empty:
-                    await asyncio.sleep(0.1)
-                    continue
-            
-            while True:
-                try:
-                    progress_data = progress_queue.get(block=False)
-                    yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
-                except queue.Empty:
-                    break
-            
-            result = await task
-            
-            if result is not None:
-                yield f"event: complete\ndata: {json.dumps(result)}\n\n"
-            else:
-                yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
-            
-        except asyncio.CancelledError:
-            logger.info("SSE stream cancelled by client disconnect")
-            yield f"event: cancelled\ndata: {json.dumps({'message': 'Client disconnected'})}\n\n"
-        except InterruptedError:
-            yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
-        except Exception as e:
-            logger.error(f"SSE stream error: {e}")
-            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
-    
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+    parameters = parse_prefixed_parameters(dict(request.query_params))
+    return await create_sse_stream(request, execute_dimension_tables_with_progress, parameters)
 
 
 async def execute_visualize_with_progress(assembly: str, parameters: dict, progress_callback):
