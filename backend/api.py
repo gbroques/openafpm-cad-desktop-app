@@ -18,6 +18,7 @@ import logging
 import time
 import json
 import asyncio
+import ast
 import queue
 import threading
 from functools import partial
@@ -113,25 +114,10 @@ def convert_query_param_type(value: str) -> Any:
     Returns:
         Converted value as bool, int, float, or str
     """
-    # Try boolean
-    if value.lower() in ('true', 'false'):
-        return value.lower() == 'true'
-    
-    # Try int
     try:
-        if '.' not in value:
-            return int(value)
-    except ValueError:
-        pass
-    
-    # Try float
-    try:
-        return float(value)
-    except ValueError:
-        pass
-    
-    # Return as string
-    return value
+        return ast.literal_eval(value)
+    except (ValueError, SyntaxError):
+        return value
 
 
 app = FastAPI()
