@@ -359,6 +359,8 @@ async def visualize_stream(assembly: str, request: Request):
             
         except asyncio.CancelledError:
             logger.info("SSE stream cancelled by client disconnect")
+        except InterruptedError:
+            yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
         except Exception as e:
             logger.error(f"SSE stream error: {e}")
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
@@ -421,6 +423,8 @@ async def cnc_overview_stream(request: Request):
             
         except asyncio.CancelledError:
             logger.info("SSE stream cancelled by client disconnect")
+        except InterruptedError:
+            yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
         except Exception as e:
             logger.error(f"SSE stream error: {e}")
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
@@ -483,6 +487,8 @@ async def dimension_tables_stream(request: Request):
             
         except asyncio.CancelledError:
             logger.info("SSE stream cancelled by client disconnect")
+        except InterruptedError:
+            yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
         except Exception as e:
             logger.error(f"SSE stream error: {e}")
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
