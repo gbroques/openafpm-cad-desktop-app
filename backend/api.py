@@ -166,40 +166,6 @@ def create_dxf_archive_endpoint(request: ParametersRequest):
     return Response(content=dxf_bytes, media_type="application/octet-stream")
 
 
-@app.post("/api/visualize/{assembly}")
-def visualize(assembly: str, request: ParametersRequest) -> dict:
-    parameters = request.dict()
-    magnafpm_parameters = parameters["magnafpm"]
-    furling_parameters = parameters["furling"]
-    user_parameters = parameters["user"]
-
-    assembly_enum = {
-        "WindTurbine": Assembly.WIND_TURBINE,
-        "StatorMold": Assembly.STATOR_MOLD,
-        "RotorMold": Assembly.ROTOR_MOLD,
-        "MagnetJig": Assembly.MAGNET_JIG,
-        "CoilWinder": Assembly.COIL_WINDER,
-        "BladeTemplate": Assembly.BLADE_TEMPLATE,
-    }.get(assembly)
-
-    if not assembly_enum:
-        raise HTTPException(status_code=400, detail="Invalid assembly type")
-
-    root_documents, spreadsheet_document = load_all_with_cache(
-        magnafpm_parameters, furling_parameters, user_parameters
-    )
-
-    assembly_index = list(Assembly).index(assembly_enum)
-    assembly_document = root_documents[assembly_index]
-    obj_text = get_assembly_to_obj(assembly_enum, assembly_document)
-
-    if assembly_enum == Assembly.WIND_TURBINE:
-        furl_transform = get_furl_transform(assembly_document, spreadsheet_document)
-    else:
-        furl_transform = None
-    return {"objText": obj_text, "furlTransform": furl_transform}
-
-
 @app.get("/api/visualize/{assembly}/stream")
 async def visualize_stream(assembly: str, request: Request):
     """SSE endpoint for visualize with real-time progress updates."""
@@ -207,48 +173,11 @@ async def visualize_stream(assembly: str, request: Request):
     return await create_sse_stream(request, execute_visualize_with_progress, assembly, parameters)
 
 
-@app.post("/api/getcncoverview")
-def get_cnc_overview(request: ParametersRequest) -> dict:
-    parameters = request.dict()
-    magnafpm_parameters = parameters["magnafpm"]
-    furling_parameters = parameters["furling"]
-    user_parameters = parameters["user"]
-
-    root_documents, spreadsheet_document = load_all_with_cache(
-        magnafpm_parameters, furling_parameters, user_parameters
-    )
-
-    svg = get_dxf_as_svg(root_documents, magnafpm_parameters)
-    return {"svg": svg}
-
-
 @app.get("/api/getcncoverview/stream")
 async def cnc_overview_stream(request: Request):
     """SSE endpoint for CNC overview with real-time progress updates."""
     parameters = parse_prefixed_parameters(dict(request.query_params))
     return await create_sse_stream(request, execute_cnc_overview_with_progress, parameters)
-
-
-@app.post("/api/getdimensiontables")
-def get_dimension_tables_endpoint(request: ParametersRequest) -> dict:
-    parameters = request.dict()
-    magnafpm_parameters = parameters["magnafpm"]
-    furling_parameters = parameters["furling"]
-    user_parameters = parameters["user"]
-
-    root_documents, spreadsheet_document = load_all_with_cache(
-        magnafpm_parameters, furling_parameters, user_parameters
-    )
-
-    img_base_path_prefix = (
-        "/squashfs-root" if sys.platform == "darwin" else "/squashfs-root/usr"
-    )
-    tables = get_dimension_tables(
-        spreadsheet_document,
-        App.listDocuments()["Alternator"],
-        img_path_prefix=f"{img_base_path_prefix}/Mod/openafpm-cad-core/openafpm_cad_core/img/",
-    )
-    return {"tables": tables}
 
 
 @app.get("/api/getdimensiontables/stream")
