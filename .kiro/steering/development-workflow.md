@@ -22,4 +22,4 @@
 ## Common Issues
 - Python subprocess spawning requires `asar: false`
 - `FREECAD_LIB` environment variable must point to FreeCAD library path (e.g., `squashfs-root/usr/lib`)
-- Python dependencies installed to `squashfs-root/usr/lib/python*/site-packages/`
+- Python dependencies installed to `squashfs-root/usr/lib/python*/site-packages/` using `python -m pip`
