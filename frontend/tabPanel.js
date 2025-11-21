@@ -10,6 +10,7 @@ class TabPanel extends LitElement {
     }
     :host([visible]) {
       display: block;
+      height: 100%;
     }
   `;
   render() {

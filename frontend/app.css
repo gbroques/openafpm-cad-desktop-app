@@ -1,0 +1,94 @@
+x-app {
+  display: grid;
+  grid-template-rows: min-content min-content 1fr;
+  height: 100%;
+}
+
+x-app .visualizationTabContents {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+x-app #visualization-root {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+x-app .cncOverviewContainer {
+  background-color: black;
+  padding: calc(var(--spacing) * 2);
+}
+
+x-app .cncOverviewContainer > svg {
+  width: 100%;
+  height: 100%;
+}
+
+x-app .centeredContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+x-app .tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+x-app .tab-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+x-app .tab-spinner {
+  position: absolute;
+  right: calc(var(--spacing) * -3);
+  width: 16px;
+  height: 16px;
+}
+
+@media print {
+  x-app .tabs {
+    display: none;
+  }
+}
+
+/**********************************************************
+ * Table styles                                           *
+ **********************************************************/
+x-app .dimensionTablesContainer table {
+  border-collapse: collapse;
+  break-inside: avoid-page;
+}
+
+x-app .dimensionTablesContainer > * {
+  margin-bottom: calc(var(--spacing) * 2);
+}
+
+x-app .dimensionTablesContainer td,
+x-app .dimensionTablesContainer th {
+  border: 1px solid var(--text-color);
+  padding: calc(var(--spacing) / 2) var(--spacing);
+  transition: border-color var(--transition-duration-standard) ease-in-out;
+}
+
+x-app .dimensionTablesContainer th {
+  text-align: left;
+  text-transform: uppercase;
+}
+
+x-app .dimensionTablesContainer tfoot td {
+  border: none;
+}
+
+x-app .dimensionTablesContainer img {
+  max-width: 480px;
+}
