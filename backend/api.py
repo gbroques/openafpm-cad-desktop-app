@@ -56,7 +56,6 @@ from openafpm_cad_core.app import (
     hash_parameters
 )
 from .cancelable_singleflight_cache import cancelable_singleflight_cache
-from . import cancelable_singleflight_cache as cache_module
 
 
 app = FastAPI()
