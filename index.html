@@ -506,9 +506,10 @@
             [stateKeys.progress]: { percent: 0, message: 'Starting...' }
           });
         } else {
-          // When switching assemblies, only clear error - keep old data and progress
+          // When switching assemblies, clear data and error but keep existing progress
           setState({ 
-            [stateKeys.error]: ''
+            [stateKeys.error]: '',
+            [stateKeys.data]: stateKeys.initialData
           });
         }
         
