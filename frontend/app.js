@@ -244,7 +244,7 @@ export default class App extends LitElement {
             </x-navigation-rail-button>
           </x-navigation-rail>
           <div id="visualization-root" data-theme=${this.theme || 'light'}>
-            ${!this.visualize && !this.visualizeProgress ? html`<x-empty-state></x-empty-state>` : ''}
+            ${!this.visualize && !this.visualizeProgress && !this.visualizeErrorMessage ? html`<x-empty-state></x-empty-state>` : ''}
           </div>
           <x-download-button
             title="Download FreeCAD files"
