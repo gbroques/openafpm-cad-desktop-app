@@ -40,6 +40,13 @@ class ProgressBroadcaster:
                 self.callbacks = [cb for cb in self.callbacks if cb not in failed_callbacks]
                 logger.info(f"Removed {len(failed_callbacks)} failed callback(s), remaining: {len(self.callbacks)}")
     
+    def remove_callback(self, callback: Callable[[int, str], None]):
+        """Remove a progress callback."""
+        with self.lock:
+            if callback in self.callbacks:
+                self.callbacks.remove(callback)
+                logger.info(f"Removed progress callback, remaining: {len(self.callbacks)}")
+    
     def get_callback_count(self) -> int:
         """Get number of active callbacks."""
         with self.lock:

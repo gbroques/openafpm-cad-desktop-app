@@ -56,12 +56,17 @@ from openafpm_cad_core.app import (
     hash_parameters
 )
 from .request_collapse import cancelable_singleflight_cache
+from . import request_collapse
 
 
 app = FastAPI()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%dT%H:%M:%S%z'
+)
 logger = logging.getLogger(__name__)
 
 
@@ -296,69 +301,86 @@ async def create_sse_stream(request: Request, execute_func, *args, **kwargs) -> 
         error: {"error": str} - Operation failed with error
     """
     async def event_stream():
-        progress_queue = asyncio.Queue()
-        client_disconnected = False
-        loop = asyncio.get_event_loop()
-        
-        def progress_callback(message: str, progress: int):
-            if client_disconnected:
-                return
-            try:
-                asyncio.run_coroutine_threadsafe(
-                    progress_queue.put({
-                        "progress": progress, 
-                        "message": message
-                    }),
-                    loop
-                )
-            except Exception:
-                pass
-        
-        task = asyncio.create_task(
-            execute_func(*args, progress_callback=progress_callback, **kwargs)
-        )
-        
+        stream_id = id(asyncio.current_task())
         try:
-            while not task.done():
-                if await request.is_disconnected():
-                    client_disconnected = True
-                    task.cancel()
-                    return
+            if await request.is_disconnected():
+                return
                 
+            progress_queue = asyncio.Queue()
+            cancel_event = threading.Event()
+            stream_active = threading.Event()
+            stream_active.set()
+            loop = asyncio.get_event_loop()
+        
+            def progress_callback(message: str, progress: int):
+                if not stream_active.is_set():
+                    return
                 try:
-                    progress_data = await asyncio.wait_for(progress_queue.get(), timeout=0.1)
-                    yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
-                except asyncio.TimeoutError:
-                    continue
+                    asyncio.run_coroutine_threadsafe(
+                        progress_queue.put({
+                            "progress": progress, 
+                            "message": message
+                        }),
+                        loop
+                    )
+                except Exception:
+                    pass
             
-            # Drain remaining progress updates
-            while not progress_queue.empty():
-                try:
-                    progress_data = progress_queue.get_nowait()
-                    yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
-                except asyncio.QueueEmpty:
-                    break
+            task = asyncio.create_task(
+                execute_func(*args, progress_callback=progress_callback, cancel_event=cancel_event, **kwargs)
+            )
             
-            result = await task
-            
-            if result is not None:
-                yield f"event: complete\ndata: {json.dumps(result)}\n\n"
-            else:
+            try:
+                while not task.done():
+                    if await request.is_disconnected():
+                        task.cancel()
+                        return
+                    
+                    try:
+                        progress_data = await asyncio.wait_for(progress_queue.get(), timeout=0.1)
+                        try:
+                            yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
+                        except Exception:
+                            task.cancel()
+                            return
+                    except asyncio.TimeoutError:
+                        try:
+                            yield ": keepalive\n\n"
+                        except Exception:
+                            task.cancel()
+                            return
+                
+                # Drain remaining progress updates
+                while not progress_queue.empty():
+                    try:
+                        progress_data = progress_queue.get_nowait()
+                        yield f"event: progress\ndata: {json.dumps(progress_data)}\n\n"
+                    except asyncio.QueueEmpty:
+                        break
+                
+                result = await task
+                
+                if result is not None:
+                    yield f"event: complete\ndata: {json.dumps(result)}\n\n"
+                else:
+                    yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
+                
+            except asyncio.CancelledError:
+                return
+            except InterruptedError:
                 yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
-            
-        except asyncio.CancelledError:
-            logger.info("SSE stream cancelled by client disconnect")
-            yield f"event: cancelled\ndata: {json.dumps({'message': 'Client disconnected'})}\n\n"
-        except InterruptedError:
-            yield f"event: cancelled\ndata: {json.dumps({'message': 'Operation cancelled'})}\n\n"
+            except Exception as e:
+                logger.error(f"SSE stream error: {e}")
+                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
         except Exception as e:
-            logger.error(f"SSE stream error: {e}")
-            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+            logger.debug(f"SSE stream ended: {e}")
+        finally:
+            stream_active.clear()
     
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
-async def execute_visualize_with_progress(assembly: str, parameters: dict, progress_callback) -> dict | None:
+async def execute_visualize_with_progress(assembly: str, parameters: dict, progress_callback, cancel_event) -> dict | None:
     """Execute visualize operation with progress updates."""
     try:
         loop = asyncio.get_event_loop()
@@ -370,7 +392,7 @@ async def execute_visualize_with_progress(assembly: str, parameters: dict, progr
         
         root_documents, spreadsheet_document = await loop.run_in_executor(
             None, 
-            partial(load_all_with_cache, progress_callback=progress_callback),
+            partial(load_all_with_cache, progress_callback=progress_callback, cancel_event=cancel_event),
             magnafpm_parameters, furling_parameters, user_parameters
         )
         
@@ -414,7 +436,7 @@ async def execute_visualize_with_progress(assembly: str, parameters: dict, progr
     return {"objText": obj_text, "furlTransform": furl_transform}
 
 
-async def execute_cnc_overview_with_progress(parameters: dict, progress_callback) -> str | None:
+async def execute_cnc_overview_with_progress(parameters: dict, progress_callback, cancel_event) -> str | None:
     """Execute CNC overview operation with progress updates."""
     try:
         loop = asyncio.get_event_loop()
@@ -426,7 +448,7 @@ async def execute_cnc_overview_with_progress(parameters: dict, progress_callback
         
         root_documents, spreadsheet_document = await loop.run_in_executor(
             None,
-            partial(load_all_with_cache, progress_callback=progress_callback),
+            partial(load_all_with_cache, progress_callback=progress_callback, cancel_event=cancel_event),
             
             magnafpm_parameters, furling_parameters, user_parameters
         )
@@ -455,7 +477,7 @@ async def execute_cnc_overview_with_progress(parameters: dict, progress_callback
         raise
 
 
-async def execute_dimension_tables_with_progress(parameters: dict, progress_callback) -> dict | None:
+async def execute_dimension_tables_with_progress(parameters: dict, progress_callback, cancel_event) -> dict | None:
     """Execute dimension tables operation with progress updates."""
     try:
         logger.info("Starting execute_dimension_tables_with_progress")
@@ -468,7 +490,7 @@ async def execute_dimension_tables_with_progress(parameters: dict, progress_call
         
         root_documents, spreadsheet_document = await loop.run_in_executor(
             None,
-            partial(load_all_with_cache, progress_callback=progress_callback),
+            partial(load_all_with_cache, progress_callback=progress_callback, cancel_event=cancel_event),
             
             magnafpm_parameters, furling_parameters, user_parameters
         )
