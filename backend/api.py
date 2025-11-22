@@ -306,7 +306,6 @@ async def create_sse_stream(request: Request, execute_func, *args, **kwargs) -> 
                 return
                 
             progress_queue = asyncio.Queue()
-            cancel_event = threading.Event()
             stream_active = threading.Event()
             stream_active.set()
             loop = asyncio.get_event_loop()
@@ -326,7 +325,7 @@ async def create_sse_stream(request: Request, execute_func, *args, **kwargs) -> 
                     pass
             
             task = asyncio.create_task(
-                execute_func(*args, progress_callback=progress_callback, cancel_event=cancel_event, **kwargs)
+                execute_func(*args, progress_callback=progress_callback, **kwargs)
             )
             
             try:
@@ -379,7 +378,7 @@ async def create_sse_stream(request: Request, execute_func, *args, **kwargs) -> 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
-async def execute_visualize_with_progress(assembly: str, parameters: dict, progress_callback, cancel_event) -> dict | None:
+async def execute_visualize_with_progress(assembly: str, parameters: dict, progress_callback) -> dict | None:
     """Execute visualize operation with progress updates."""
     try:
         loop = asyncio.get_event_loop()
@@ -435,7 +434,7 @@ async def execute_visualize_with_progress(assembly: str, parameters: dict, progr
     return {"objText": obj_text, "furlTransform": furl_transform}
 
 
-async def execute_cnc_overview_with_progress(parameters: dict, progress_callback, cancel_event) -> str | None:
+async def execute_cnc_overview_with_progress(parameters: dict, progress_callback) -> str | None:
     """Execute CNC overview operation with progress updates."""
     try:
         loop = asyncio.get_event_loop()
@@ -476,7 +475,7 @@ async def execute_cnc_overview_with_progress(parameters: dict, progress_callback
         raise
 
 
-async def execute_dimension_tables_with_progress(parameters: dict, progress_callback, cancel_event) -> dict | None:
+async def execute_dimension_tables_with_progress(parameters: dict, progress_callback) -> dict | None:
     """Execute dimension tables operation with progress updates."""
     try:
         logger.info("Starting execute_dimension_tables_with_progress")
