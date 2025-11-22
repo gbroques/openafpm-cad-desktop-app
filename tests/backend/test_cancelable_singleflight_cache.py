@@ -7,17 +7,17 @@ import threading
 import time
 from unittest.mock import Mock, call
 
-from backend.request_collapse import cancelable_singleflight_cache
+from backend.cancelable_singleflight_cache import cancelable_singleflight_cache
 
 
 class TestCancelableSingleflightCache(unittest.TestCase):
     
     def setUp(self):
         """Reset global cache state before each test."""
-        from backend import request_collapse
-        request_collapse._current_cache_key = None
-        request_collapse._current_cache_entry = None
-        request_collapse._current_cancel_event = None
+        from backend import cancelable_singleflight_cache
+        cancelable_singleflight_cache._current_cache_key = None
+        cancelable_singleflight_cache._current_cache_entry = None
+        cancelable_singleflight_cache._current_cancel_event = None
     
     def test_single_request_executes_function(self):
         """Single request should execute the wrapped function."""
@@ -326,13 +326,14 @@ class TestCancelableSingleflightCache(unittest.TestCase):
     
     def test_cache_cleared_on_none_entry(self):
         """Waiting request should handle cache being cleared (None entry)."""
-        from backend import request_collapse
+        from backend import cancelable_singleflight_cache as cache_module
+        from backend.cancelable_singleflight_cache import cancelable_singleflight_cache as decorator
         
         def slow_func(*args, progress_callback=None, cancel_event=None):
             time.sleep(0.1)
             return "result"
         
-        decorated = cancelable_singleflight_cache(lambda *args: "key1")(slow_func)
+        decorated = decorator(lambda *args: "key1")(slow_func)
         
         exception_caught = False
         
@@ -348,10 +349,10 @@ class TestCancelableSingleflightCache(unittest.TestCase):
         
         def clear_cache():
             time.sleep(0.02)
-            with request_collapse._cache_lock:
-                request_collapse._current_cache_entry = None
-                if request_collapse._current_cache_entry is not None:
-                    request_collapse._current_cache_entry["event"].set()
+            with cache_module._cache_lock:
+                cache_module._current_cache_entry = None
+                if cache_module._current_cache_entry is not None:
+                    cache_module._current_cache_entry["event"].set()
         
         t1 = threading.Thread(target=worker1)
         t2 = threading.Thread(target=worker2)
