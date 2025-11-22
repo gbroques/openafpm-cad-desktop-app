@@ -300,7 +300,6 @@ async def create_sse_stream(request: Request, execute_func, *args, **kwargs) -> 
         error: {"error": str} - Operation failed with error
     """
     async def event_stream():
-        stream_id = id(asyncio.current_task())
         try:
             if await request.is_disconnected():
                 return
