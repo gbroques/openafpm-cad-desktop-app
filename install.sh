@@ -138,4 +138,8 @@ else
   echo ".env file already exists."
 fi
 
+# Strip unnecessary files
+# -----------------------
+./strip-freecad.sh
+
 echo 'Install complete.'
