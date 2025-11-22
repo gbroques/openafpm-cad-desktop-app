@@ -389,7 +389,7 @@ async def execute_visualize_with_progress(assembly: str, parameters: dict, progr
         
         root_documents, spreadsheet_document = await loop.run_in_executor(
             None, 
-            partial(load_all_with_cache, progress_callback=progress_callback, cancel_event=cancel_event),
+            partial(load_all_with_cache, progress_callback=progress_callback),
             magnafpm_parameters, furling_parameters, user_parameters
         )
         
@@ -445,7 +445,7 @@ async def execute_cnc_overview_with_progress(parameters: dict, progress_callback
         
         root_documents, spreadsheet_document = await loop.run_in_executor(
             None,
-            partial(load_all_with_cache, progress_callback=progress_callback, cancel_event=cancel_event),
+            partial(load_all_with_cache, progress_callback=progress_callback),
             
             magnafpm_parameters, furling_parameters, user_parameters
         )
@@ -487,7 +487,7 @@ async def execute_dimension_tables_with_progress(parameters: dict, progress_call
         
         root_documents, spreadsheet_document = await loop.run_in_executor(
             None,
-            partial(load_all_with_cache, progress_callback=progress_callback, cancel_event=cancel_event),
+            partial(load_all_with_cache, progress_callback=progress_callback),
             
             magnafpm_parameters, furling_parameters, user_parameters
         )
