@@ -53,7 +53,8 @@ from openafpm_cad_core.app import (
     get_dimension_tables,
     get_dxf_archive,
     get_freecad_archive,
-    hash_parameters
+    hash_parameters,
+    WindTurbineShape
 )
 from .cancelable_singleflight_cache import cancelable_singleflight_cache
 
@@ -108,8 +109,12 @@ def get_default_parameters_endpoint() -> dict:
 def get_parameters_schema_endpoint() -> dict:
     def get_parameters_schema_for_preset(preset: str):
         default_parameters = get_default_parameters(preset)
-        default_rotor_disk_radius = default_parameters["magnafpm"]["RotorDiskRadius"]
-        return get_parameters_schema(default_rotor_disk_radius)
+        wind_turbine_shape = default_parameters["user"]["WindTurbineShape"]
+        if wind_turbine_shape == 'Calculated':
+            wind_turbine_shape = map_rotor_disk_radius_to_wind_turbine_shape(default_parameters['magnafpm']['RotorDiskRadius'])
+        else:
+            wind_turbine_shape = WindTurbineShape.from_string(wind_turbine_shape)
+        return get_parameters_schema(wind_turbine_shape)
 
     first_five_presets = get_presets()[:5]
     first_five_parameter_schemas = [
