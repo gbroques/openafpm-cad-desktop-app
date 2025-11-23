@@ -8,7 +8,7 @@ const { spawn } = require('child_process');
 const dotenv = require('dotenv');
 const portfinder = require('portfinder');
 
-async function tryWithExponentialBackoff(fn, predicate, mainWindow, maxTries = 7) {
+async function tryWithExponentialBackoff(fn, predicate, mainWindow, maxTries = 8) {
   let result = await fn();
   let numTries = 1;
   while (predicate(result) && numTries < maxTries) {
