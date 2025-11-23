@@ -587,7 +587,14 @@
               // TODO: We should validate this user input instead of trusting it.
               const {preset, ...parametersByGroup} = JSON.parse(loadEvent.target.result);
               const parameters = flatten(parametersByGroup);
-              const form = mapValues(parameters, value => ({value, validationMessage: ''}));
+              
+              // Filter to only known parameters from current form
+              const knownParameters = Object.keys(app.form || {});
+              const filteredParameters = Object.fromEntries(
+                Object.entries(parameters).filter(([key]) => knownParameters.includes(key))
+              );
+              
+              const form = mapValues(filteredParameters, value => ({value, validationMessage: ''}));
               setState({ form });
             } catch (error) {
               console.error(error);
