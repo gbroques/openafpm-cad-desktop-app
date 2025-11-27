@@ -39,6 +39,20 @@
 #
 set -e
 
+# Check if gh is installed
+if ! command -v gh >/dev/null 2>&1; then
+  echo "Error: GitHub CLI (gh) is not installed." >&2
+  echo "Install it from: https://cli.github.com/" >&2
+  exit 1
+fi
+
+# Check if authenticated
+if ! gh auth status >/dev/null 2>&1; then
+  echo "Error: Not authenticated with GitHub CLI." >&2
+  echo "Run: gh auth login" >&2
+  exit 1
+fi
+
 # Check required environment variables
 if [ -z "$OPENAFPM_SENDER_EMAIL" ]; then
   echo "Error: OPENAFPM_SENDER_EMAIL environment variable not set"
