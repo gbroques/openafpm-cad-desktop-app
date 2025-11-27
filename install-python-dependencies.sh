@@ -96,30 +96,32 @@ validate_command_exists git
 
 site_packages_dir="site-packages"
 
-# openafpm-cad-core
-if [ ! -e "$site_packages_dir/openafpm-cad-core" ]; then
+# Create site-packages directory if it doesn't exist
+mkdir -p "$site_packages_dir"
+
+# Version pin for openafpm-cad-core
+OPENAFPM_CAD_CORE_VERSION="e99e6c0a07f457e4cbb59ec271b03d939a8d8e42"
+
+# openafpm-cad-core (and its dependency freecad-to-obj)
+if [ ! -e "$site_packages_dir/openafpm_cad_core" ]; then
   if [ -d "../openafpm-cad-core" ]; then
     echo "Creating symlink to ../openafpm-cad-core for local development."
-    ln -s "$(cd ../openafpm-cad-core && pwd)" "$site_packages_dir/openafpm-cad-core"
+    ln -s "$(cd ../openafpm-cad-core && pwd)/openafpm_cad_core" "$site_packages_dir/openafpm_cad_core"
   else
-    echo "Downloading openafpm-cad-core module."
-    git clone --depth 1 https://github.com/gbroques/openafpm-cad-core.git "$site_packages_dir/openafpm-cad-core"
+    echo "Installing openafpm-cad-core from git..."
+    "$python_path" -m pip install --target "$site_packages_dir" \
+      "git+https://github.com/gbroques/openafpm-cad-core.git@$OPENAFPM_CAD_CORE_VERSION"
   fi
 else
   echo "openafpm-cad-core module already exists."
 fi
 
-# freecad-to-obj
-if [ ! -e "$site_packages_dir/freecad-to-obj" ]; then
+# freecad-to-obj (for local development testing)
+if [ ! -e "$site_packages_dir/freecad_to_obj" ]; then
   if [ -d "../freecad-to-obj" ]; then
     echo "Creating symlink to ../freecad-to-obj for local development."
-    ln -s "$(cd ../freecad-to-obj && pwd)" "$site_packages_dir/freecad-to-obj"
-  else
-    echo "Downloading freecad-to-obj module."
-    git clone --depth 1 https://github.com/gbroques/freecad-to-obj.git "$site_packages_dir/freecad-to-obj"
+    ln -s "$(cd ../freecad-to-obj && pwd)/freecad_to_obj" "$site_packages_dir/freecad_to_obj"
   fi
-else
-  echo "freecad-to-obj module already exists."
 fi
 
 # Install additional Python libraries

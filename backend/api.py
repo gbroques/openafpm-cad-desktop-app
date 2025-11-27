@@ -504,7 +504,7 @@ async def execute_dimension_tables_with_progress(parameters: dict, progress_call
             logger.warning(f"Progress callback failed (likely cancelled): {e}")
         
         # Use relative URL path for images
-        img_url_path = "/site-packages/openafpm-cad-core/openafpm_cad_core/img/"
+        img_url_path = "/site-packages/openafpm_cad_core/img/"
         
         tables = await loop.run_in_executor(
             None,
@@ -531,8 +531,8 @@ async def execute_dimension_tables_with_progress(parameters: dict, progress_call
 # Mount static file directories after API routes
 project_root = Path(__file__).parent.parent
 app.mount(
-    "/site-packages/openafpm-cad-core/openafpm_cad_core/img",
-    StaticFiles(directory=str(project_root / "site-packages" / "openafpm-cad-core" / "openafpm_cad_core" / "img")),
+    "/site-packages/openafpm_cad_core/img",
+    StaticFiles(directory=str(project_root / "site-packages" / "openafpm_cad_core" / "img")),
     name="openafpm-images",
 )
 app.mount(

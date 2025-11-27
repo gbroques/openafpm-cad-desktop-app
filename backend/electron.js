@@ -49,12 +49,6 @@ function startApi(pythonPath, freecadLibPath, port) {
   return new Promise((resolve, reject) => {
     const rootPath = path.join(__dirname, '..');
     const sitePackagesPath = path.join(rootPath, 'site-packages');
-    // Add both the cloned repos and freecad-to-obj to PYTHONPATH
-    const pythonPathEnv = [
-      path.join(sitePackagesPath, 'openafpm-cad-core'),
-      path.join(sitePackagesPath, 'freecad-to-obj'),
-      sitePackagesPath
-    ].join(path.delimiter);
     
     const options = { 
       cwd: rootPath, 
@@ -63,13 +57,13 @@ function startApi(pythonPath, freecadLibPath, port) {
       env: { 
         ...process.env, 
         FREECAD_LIB: freecadLibPath,
-        PYTHONPATH: pythonPathEnv
+        PYTHONPATH: sitePackagesPath
       }
     };
     console.log(`Starting Python backend:`);
     console.log(`  Python: ${pythonPath}`);
     console.log(`  FREECAD_LIB: ${freecadLibPath}`);
-    console.log(`  PYTHONPATH: ${pythonPathEnv}`);
+    console.log(`  PYTHONPATH: ${sitePackagesPath}`);
     
     const transaction = new Transaction();
     const childProcess = spawn(pythonPath, ['-m', 'backend.api', '--port', port.toString()], options);
