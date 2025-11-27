@@ -48,14 +48,14 @@ find_python()
   freecad_dir="$user_data_path/freecad"
   
   if [ ! -d "$freecad_dir" ]; then
-    return 1
+    return 0
   fi
   
   # Find latest version directory
   version_dir=$(find "$freecad_dir" -maxdepth 1 -type d -name "1.0.*" | sort -V | tail -1)
   
   if [ -z "$version_dir" ]; then
-    return 1
+    return 0
   fi
   
   # Find python executable
@@ -66,7 +66,7 @@ find_python()
     return 0
   fi
   
-  return 1
+  return 0
 }
 
 # Download FreeCAD if not present
