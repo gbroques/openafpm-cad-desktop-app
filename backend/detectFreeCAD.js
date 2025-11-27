@@ -5,15 +5,9 @@ const path = require('path');
 /**
  * Detects FreeCAD installation by checking .env cache and app data directory.
  * @param {string} rootPath - Root path of the application
- * @param {Function} onProgress - Progress callback function(message, value, max)
  * @returns {Promise<{python: string, freecadLib: string}|null>} FreeCAD paths or null if not found
  */
-async function detectFreeCAD(rootPath, onProgress) {
-  // Send progress event
-  if (onProgress) {
-    onProgress('Detecting FreeCAD installation...', 0, 1);
-  }
-  
+async function detectFreeCAD(rootPath) {
   // 1. Check .env cache
   const cached = checkEnvCache(rootPath);
   if (cached) return cached;

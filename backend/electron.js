@@ -1,53 +1,12 @@
-const { app: electronApp, BrowserWindow, nativeTheme, ipcMain, shell, Menu } = require('electron');
+const { app: electronApp, BrowserWindow, nativeTheme, shell, Menu } = require('electron');
 const path = require('path');
 const os = require('node:os');
 const fs = require('node:fs');
-const http = require('http');
 const process = require('process');
 const { spawn } = require('child_process');
 const portfinder = require('portfinder');
 const detectFreeCAD = require('./detectFreeCAD');
 const downloadFreeCAD = require('./downloadFreeCAD');
-
-async function tryWithExponentialBackoff(fn, predicate, mainWindow, maxTries = 8) {
-  let result = await fn();
-  let numTries = 1;
-  while (predicate(result) && numTries < maxTries) {
-    const timeInMilliseconds = 2 ** numTries * 100;
-    await withProgress(mainWindow, timeInMilliseconds);
-    result = await fn();
-    numTries++;
-  }
-  return result;
-}
-
-async function withProgress(mainWindow, max, delay = 100, message = 'Spawning Python child process') {
-  let tick = 0;
-  const sendProgress = () => {
-    const value = tick * delay;
-    const percent = Math.round((value / max) * 100);
-    mainWindow.webContents.send('progress', {
-      message: `${message} ${percent}%`,
-      value,
-      max,
-      type: 'python'
-    });
-  };
-  
-  sendProgress();
-  tick++;
-  const intervalId = setInterval(() => {
-    sendProgress();
-    tick++;
-  }, delay);
-  await wait(max);
-  sendProgress();
-  clearInterval(intervalId);
-}
-
-function wait(milliseconds) {
-  return new Promise(resolve => setTimeout(resolve, milliseconds));
-}
 
 function formatDateWithoutMilliseconds(date) {
   return date.toISOString().split('.')[0] + 'Z';
@@ -66,33 +25,6 @@ class Transaction {
   logEnd(level, ...args) {
     console[level](formatDateWithoutMilliseconds(new Date()), `[PID ${process.pid}]`, 'END', ...args);
   }
-}
-
-function fetchIndexHtml(url) {
-  return new Promise(resolve => {
-    const transaction = new Transaction();
-    transaction.logStart('GET', url);
-    const request = http.get(url, (response) => {
-      if (response.statusCode !== 200) {
-        transaction.logFailure('GET', url, response.statusCode);
-        resolve({ type: 'error', data: response.statusCode.toString() });
-        return;
-      }
-      transaction.logSuccess('GET', url, response.statusCode);
-      let data = ''
-      response.on('data', (chunk) => {
-        data += chunk;
-      });
-      response.on('end', () => {
-        resolve({type: 'success', data});
-      });
-    });
-    request.on('error', (error) => {
-      transaction.logFailure('GET', url, error.code);
-      resolve({type: 'error', data: error});
-    })
-    request.end();
-  });
 }
 
 function createWindow() {
@@ -114,35 +46,61 @@ electronApp.on('window-all-closed', () => {
 });
 
 function startApi(pythonPath, freecadLibPath, port) {
-  const rootPath = path.join(__dirname, '..');
-  const sitePackagesPath = path.join(rootPath, 'site-packages');
-  // Add both the cloned repos and freecad-to-obj to PYTHONPATH
-  const pythonPathEnv = [
-    path.join(sitePackagesPath, 'openafpm-cad-core'),
-    path.join(sitePackagesPath, 'freecad-to-obj'),
-    sitePackagesPath
-  ].join(path.delimiter);
-  
-  const options = { 
-    cwd: rootPath, 
-    stdio: 'inherit', 
-    windowsHide: true,
-    env: { 
-      ...process.env, 
-      FREECAD_LIB: freecadLibPath,
-      PYTHONPATH: pythonPathEnv
-    }
-  };
-  console.log(`Starting Python backend:`);
-  console.log(`  Python: ${pythonPath}`);
-  console.log(`  FREECAD_LIB: ${freecadLibPath}`);
-  console.log(`  PYTHONPATH: ${pythonPathEnv}`);
-  const transaction = new Transaction();
-  const childProcess = spawn(pythonPath, ['-m', 'backend.api', '--port', port.toString()], options);
-  childProcess.on('spawn', () => transaction.logStart('spawn', 'backend.api', 'pid', childProcess.pid));
-  childProcess.on('error', (error) => transaction.logFailure('error', 'backend.api', 'pid', childProcess.pid, error));
-  childProcess.on('exit', () => transaction.logFailure('exit', 'backend.api', 'pid', childProcess.pid));
-  return childProcess;
+  return new Promise((resolve, reject) => {
+    const rootPath = path.join(__dirname, '..');
+    const sitePackagesPath = path.join(rootPath, 'site-packages');
+    // Add both the cloned repos and freecad-to-obj to PYTHONPATH
+    const pythonPathEnv = [
+      path.join(sitePackagesPath, 'openafpm-cad-core'),
+      path.join(sitePackagesPath, 'freecad-to-obj'),
+      sitePackagesPath
+    ].join(path.delimiter);
+    
+    const options = { 
+      cwd: rootPath, 
+      stdio: ['ignore', 'inherit', 'pipe'], // pipe stderr to detect readiness
+      windowsHide: true,
+      env: { 
+        ...process.env, 
+        FREECAD_LIB: freecadLibPath,
+        PYTHONPATH: pythonPathEnv
+      }
+    };
+    console.log(`Starting Python backend:`);
+    console.log(`  Python: ${pythonPath}`);
+    console.log(`  FREECAD_LIB: ${freecadLibPath}`);
+    console.log(`  PYTHONPATH: ${pythonPathEnv}`);
+    
+    const transaction = new Transaction();
+    const childProcess = spawn(pythonPath, ['-m', 'backend.api', '--port', port.toString()], options);
+    
+    childProcess.on('spawn', () => transaction.logStart('spawn', 'backend.api', 'pid', childProcess.pid));
+    
+    // Listen for "Uvicorn running" in stderr to know when backend is ready
+    childProcess.stderr.on('data', (data) => {
+      const output = data.toString();
+      process.stderr.write(data); // Still show stderr output
+      
+      if (output.includes('Uvicorn running')) {
+        transaction.logSuccess('ready', 'backend.api', 'pid', childProcess.pid);
+        resolve(childProcess);
+      }
+    });
+    
+    childProcess.on('error', (error) => {
+      transaction.logFailure('error', 'backend.api', 'pid', childProcess.pid, error);
+      reject(error);
+    });
+    
+    childProcess.on('exit', (code) => {
+      transaction.logFailure('exit', 'backend.api', 'pid', childProcess.pid, 'code', code);
+    });
+    
+    // Timeout after 10 seconds
+    setTimeout(() => {
+      reject(new Error('Backend startup timeout after 10s'));
+    }, 10000);
+  });
 }
 
 const rootPath = path.join(__dirname, '..');
@@ -157,17 +115,7 @@ electronApp.whenReady()
     window.loadFile('loading.html');
     
     // Detect FreeCAD installation
-    let freecadPaths = await detectFreeCAD(
-      rootPath,
-      (message, value, max) => {
-        window.webContents.send('progress', {
-          message,
-          value,
-          max,
-          type: 'freecad'
-        });
-      }
-    );
+    let freecadPaths = await detectFreeCAD(rootPath);
     
     if (!freecadPaths) {
       // Download FreeCAD
@@ -179,24 +127,13 @@ electronApp.whenReady()
             window.webContents.send('progress', {
               message,
               value,
-              max,
-              type: 'freecad'
+              max
             });
           }
         );
         
         // Detect again after download
-        freecadPaths = await detectFreeCAD(
-          rootPath,
-          (message, value, max) => {
-            window.webContents.send('progress', {
-              message,
-              value,
-              max,
-              type: 'freecad'
-            });
-          }
-        );
+        freecadPaths = await detectFreeCAD(rootPath);
         
         if (!freecadPaths) {
           throw new Error('Failed to detect FreeCAD after download');
@@ -210,26 +147,20 @@ electronApp.whenReady()
     
     const port = await portfinder.getPortPromise({ port: 8000, stopPort: 65535 });
     const pythonPath = freecadPaths.python;
-    const childProcess = startApi(pythonPath, freecadPaths.freecadLib, port);
-    const url = `http://127.0.0.1:${port}/index.html`;
-    const result = await tryWithExponentialBackoff(
-      () => fetchIndexHtml(url),
-      (result) => result.type === 'error',
-      window
-    );
-    if (result.type === 'error') {
-      const handleRetry = () => {
-        fetchIndexHtml(url).then(result => {
-          if (result.type === 'success') {
-            window.loadURL(url);
-          }
-        });
-      };
-      ipcMain.on('retry', handleRetry);
-      window.loadFile('fallback.html');
-    } else {
-      window.loadURL(url);
+    
+    let childProcess;
+    try {
+      childProcess = await startApi(pythonPath, freecadPaths.freecadLib, port);
+    } catch (error) {
+      console.error('Failed to start Python backend:', error);
+      window.loadFile('fallback.html', { query: { error: error.message } });
+      return;
     }
+    
+    const url = `http://127.0.0.1:${port}/index.html`;
+    // Backend is ready, load UI directly
+    window.loadURL(url);
+    
     electronApp.on('before-quit', () => {
       childProcess.kill();
     });
