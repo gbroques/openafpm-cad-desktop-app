@@ -12,11 +12,13 @@ This is an Electron desktop application that integrates openafpm-cad-core and op
 ## Project Structure
 - `backend/` - Python backend code
 - `frontend/` - Frontend JavaScript/HTML
+- `site-packages/` - Python dependencies and cloned repos
 - `index.html` - Main application entry point
 - `package.json` - Node.js dependencies and build config
-- `install.sh` - Setup script for FreeCAD and dependencies
+- `install-python-dependencies.sh` - Setup script for Python dependencies
 
 ## Build Process
 - Uses electron-builder for packaging
 - `asar: false` to allow Python child processes
-- Bundles Python interpreter from FreeCAD installation for distribution
+- FreeCAD automatically downloaded on first run (not bundled)
+- Bundles site-packages with Python dependencies for distribution
