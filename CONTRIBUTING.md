@@ -51,3 +51,17 @@ find squashfs-root/ -type f -name python | xargs -I {} {} -m unittest tests.back
 Configuration for electron-builder is found under the `build` key in [`package.json`](./package.json).
 
 `asar` is set to `false` to spawn Python child processes from Node.js via a bundled Python interpreter.
+
+## Builds & Releases
+
+The project uses GitHub Actions for automated builds ([`.github/workflows/build.yml`](.github/workflows/build.yml)):
+
+- **Branch pushes (master):** Builds Linux AppImage only, uploads as artifact (7 day retention)
+- **Tagged releases (v*):** Builds all platforms (Linux, Windows, macOS) and creates GitHub release
+
+To create a release:
+
+```bash
+./release.sh 1.0.0
+git push --follow-tags
+```
