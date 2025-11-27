@@ -40,13 +40,15 @@
     OpenAFPM CAD
   </header>
   <div class="container">
-    <p>Spawning Python child process <span id="percent">0%</span></p>
+    <p><span id="message">Loading</span> <span id="percent">0%</span></p>
     <progress id="progress"></progress>
   </div>
   <script>
     const progress = document.getElementById('progress');
     const percent = document.getElementById('percent');
-    window.electronAPI.onProgress(({value, max}) => {
+    const message = document.getElementById('message');
+    window.electronAPI.onProgress(({message: msg, value, max}) => {
+      if (msg) message.innerText = msg;
       progress.value = value;
       progress.max = max;
       percent.innerText = `${Math.round((value / max) * 100)}%`;

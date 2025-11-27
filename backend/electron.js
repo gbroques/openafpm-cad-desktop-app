@@ -20,16 +20,16 @@ async function tryWithExponentialBackoff(fn, predicate, mainWindow, maxTries = 8
   return result;
 }
 
-async function withProgress(mainWindow, max, delay = 100) {
+async function withProgress(mainWindow, max, delay = 100, message = 'Spawning Python child process') {
   let tick = 0;
-  mainWindow.webContents.send('progress', {value: tick * delay , max});
+  mainWindow.webContents.send('progress', {message, value: tick * delay , max});
   tick++;
   const intervalId = setInterval(() => {
-    mainWindow.webContents.send('progress', {value: tick * delay , max});
+    mainWindow.webContents.send('progress', {message, value: tick * delay , max});
     tick++;
   }, delay);
   await wait(max);
-  mainWindow.webContents.send('progress', {value: tick * delay , max});
+  mainWindow.webContents.send('progress', {message, value: tick * delay , max});
   clearInterval(intervalId);
 }
 
