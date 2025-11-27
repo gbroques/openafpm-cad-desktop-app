@@ -92,8 +92,8 @@ function startApi(pythonPath, freecadLibPath, port) {
     
     // Timeout after 10 seconds
     setTimeout(() => {
-      reject(new Error('Backend startup timeout after 10s'));
-    }, 10000);
+      reject(new Error('Backend startup timeout after 30s'));
+    }, 30000);
   });
 }
 
