@@ -9,6 +9,7 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    environment: dev
     
     steps:
       - uses: actions/checkout@v4
@@ -56,6 +57,7 @@ jobs:
 
   build-cross-platform:
     if: startsWith(github.ref, 'refs/tags/')
+    environment: dev
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
