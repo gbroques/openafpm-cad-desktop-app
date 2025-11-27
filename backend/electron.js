@@ -109,16 +109,45 @@ process.noAsar = true;
 nativeTheme.themeSource = 'light';
 
 electronApp.whenReady()
-  .then(createWindow)
-  .then(async (window) => {
+  .then(async () => {
+    // Start backend detection and window creation in parallel
+    const backendPromise = (async () => {
+      try {
+        // Detect FreeCAD installation
+        let freecadPaths = await detectFreeCAD(rootPath);
+        
+        if (!freecadPaths) {
+          // Download FreeCAD (will need window for progress, so wait for it)
+          return { needsDownload: true };
+        }
+        
+        // Start backend
+        const port = await portfinder.getPortPromise({ port: 8000, stopPort: 65535 });
+        const childProcess = await startApi(freecadPaths.python, freecadPaths.freecadLib, port);
+        
+        return { childProcess, port, freecadPaths };
+      } catch (error) {
+        return { error };
+      }
+    })();
+    
+    const window = createWindow();
     createMenu(window);
     window.loadFile('loading.html');
     
-    // Detect FreeCAD installation
-    let freecadPaths = await detectFreeCAD(rootPath);
+    const backendResult = await backendPromise;
     
-    if (!freecadPaths) {
-      // Download FreeCAD
+    if (backendResult.error) {
+      console.error('Backend startup failed:', backendResult.error);
+      window.loadFile('fallback.html', { query: { error: backendResult.error.message } });
+      return;
+    }
+    
+    let childProcess, port;
+    
+    if (backendResult.needsDownload) {
+      // Need to download FreeCAD with progress UI
+      let freecadPaths;
       try {
         await downloadFreeCAD(
           '1.0.2',
@@ -143,22 +172,23 @@ electronApp.whenReady()
         window.loadFile('fallback.html', { query: { error: error.message } });
         return;
       }
-    }
-    
-    const port = await portfinder.getPortPromise({ port: 8000, stopPort: 65535 });
-    const pythonPath = freecadPaths.python;
-    
-    let childProcess;
-    try {
-      childProcess = await startApi(pythonPath, freecadPaths.freecadLib, port);
-    } catch (error) {
-      console.error('Failed to start Python backend:', error);
-      window.loadFile('fallback.html', { query: { error: error.message } });
-      return;
+      
+      // Start backend after download
+      port = await portfinder.getPortPromise({ port: 8000, stopPort: 65535 });
+      
+      try {
+        childProcess = await startApi(freecadPaths.python, freecadPaths.freecadLib, port);
+      } catch (error) {
+        console.error('Failed to start Python backend:', error);
+        window.loadFile('fallback.html', { query: { error: error.message } });
+        return;
+      }
+    } else {
+      // Backend already started
+      ({ childProcess, port } = backendResult);
     }
     
     const url = `http://127.0.0.1:${port}/index.html`;
-    // Backend is ready, load UI directly
     window.loadURL(url);
     
     electronApp.on('before-quit', () => {
