@@ -54,7 +54,8 @@ from openafpm_cad_core.app import (
     get_dxf_archive,
     get_freecad_archive,
     hash_parameters,
-    WindTurbineShape
+    WindTurbineShape,
+    close_all_documents
 )
 from .cancelable_singleflight_cache import cancelable_singleflight_cache
 
@@ -196,7 +197,7 @@ async def dimension_tables_stream(request: Request):
     return await create_sse_stream(request, execute_dimension_tables_with_progress, parameters)
 
 
-@cancelable_singleflight_cache(key_generator=hash_parameters)
+@cancelable_singleflight_cache(key_generator=hash_parameters, cleanup_callback=close_all_documents)
 def load_all_with_cache(
     magnafpm_parameters, furling_parameters, user_parameters, progress_callback=None, cancel_event=None
 ):

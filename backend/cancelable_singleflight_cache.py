@@ -33,9 +33,9 @@ Performance benefits:
 - Prevents FreeCAD alias conflicts from concurrent document creation
 
 Usage:
-    from openafpm_cad_core.app import load_all, hash_parameters
+    from openafpm_cad_core.app import load_all, hash_parameters, close_all_documents
     
-    @cancelable_singleflight_cache(key_generator=hash_parameters)
+    @cancelable_singleflight_cache(key_generator=hash_parameters, cleanup_callback=close_all_documents)
     def load_all_with_cache(magnafpm_parameters, furling_parameters, user_parameters, progress_callback=None, cancel_event=None):
         return load_all(magnafpm_parameters, furling_parameters, user_parameters, progress_callback, cancel_event)
     
@@ -44,6 +44,7 @@ Usage:
     # Thread 2: load_all_with_cache(params_a, params_b, params_c, callback2)  # Waits for Thread 1
     # Thread 3: load_all_with_cache(params_a, params_b, params_c, callback3)  # Waits for Thread 1
     # All threads receive the same result, and all callbacks receive progress updates
+    # When parameters change, cleanup_callback is called before clearing the cache
 """
 
 import threading
@@ -65,7 +66,7 @@ _current_cancel_event = None  # Track cancel event for active operation
 _cache_lock = threading.Lock()
 
 
-def cancelable_singleflight_cache(key_generator):
+def cancelable_singleflight_cache(key_generator, cleanup_callback=None):
     """
     Decorator factory that implements a cancelable singleflight cache pattern.
     
@@ -103,6 +104,7 @@ def cancelable_singleflight_cache(key_generator):
     
     Args:
         key_generator: Function that takes *args (positional arguments only) and returns a cache key string
+        cleanup_callback: Optional function to call when clearing completed cache entries (e.g., to close documents)
         
     Returns:
         Decorator function that wraps the target function (must accept progress_callback and cancel_event as kwargs)
@@ -165,6 +167,11 @@ def cancelable_singleflight_cache(key_generator):
                     old_event = None
                     if _current_cache_entry is not None and "event" in _current_cache_entry:
                         old_event = _current_cache_entry["event"]
+                    
+                    # Call cleanup callback before clearing completed cache
+                    if cleanup_callback and _current_cache_entry is not None and _current_cache_entry.get("status") == "complete":
+                        logger.info(f"[{request_id}] Running cleanup callback before starting new operation...")
+                        cleanup_callback()
                     
                     # Clear old cache and start new loading
                     logger.info(f"[{request_id}] Cache MISS: starting new operation for {cache_key[:8]}...")

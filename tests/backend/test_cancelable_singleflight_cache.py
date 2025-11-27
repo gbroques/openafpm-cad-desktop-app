@@ -407,6 +407,36 @@ class TestCancelableSingleflightCache(unittest.TestCase):
         # Worker3 waits for param1 to finish, then executes param2
         self.assertEqual(results["worker3"], "result-param2")
         # Worker2 may complete or be interrupted (race condition)
+    
+    def test_cleanup_callback_called_on_cache_clear(self):
+        """Cleanup callback should be called when clearing completed cache for new parameters."""
+        cleanup_called = []
+        
+        def cleanup():
+            cleanup_called.append(True)
+        
+        def func(*args, progress_callback=None, cancel_event=None):
+            return f"result-{args[0]}"
+        
+        decorated = cancelable_singleflight_cache(
+            lambda *args: f"key-{args[0]}", 
+            cleanup_callback=cleanup
+        )(func)
+        
+        # First request completes and caches result
+        result1 = decorated("param1")
+        self.assertEqual(result1, "result-param1")
+        self.assertEqual(len(cleanup_called), 0)  # No cleanup yet
+        
+        # Second request with different params should trigger cleanup
+        result2 = decorated("param2")
+        self.assertEqual(result2, "result-param2")
+        self.assertEqual(len(cleanup_called), 1)  # Cleanup called once
+        
+        # Third request with same params uses cache, no cleanup
+        result3 = decorated("param2")
+        self.assertEqual(result3, "result-param2")
+        self.assertEqual(len(cleanup_called), 1)  # Still only called once
 
 
 
