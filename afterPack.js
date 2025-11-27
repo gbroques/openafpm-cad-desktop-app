@@ -9,12 +9,15 @@
  * Solution: Manually copy node_modules and site-packages using platform-specific
  * commands (rsync on Unix, robocopy on Windows), preserving yarn's flat structure
  * while excluding unnecessary files (.git directories, platform-specific binaries,
- * source files).
+ * source files). Then prune dev dependencies from the packaged app.
  */
 const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process');
+const { promisify } = require('util');
 const os = require('os');
+
+const execAsync = promisify(exec);
 
 function getCopyCommand(sourcePath, destPath, excludes) {
   const isWindows = os.platform() === 'win32';
@@ -49,20 +52,35 @@ exports.default = async function(context) {
     }
   ];
 
+  // Copy directories
   for (const config of copyConfigs) {
     const sourcePath = path.join(__dirname, config.dir);
     const destPath = path.join(appDir, config.dir);
     const copyCommand = getCopyCommand(sourcePath, destPath, config.excludes);
     
     console.log(`Copying ${config.dir}...`);
-    exec(copyCommand, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error copying ${config.dir}:`, error);
-        if (stdout) console.log(stdout);
-      } else {
-        if (stdout) console.log(stdout);
-        if (stderr) console.error(stderr);
-      }
+    try {
+      const { stdout, stderr } = await execAsync(copyCommand);
+      if (stdout) console.log(stdout);
+      if (stderr) console.error(stderr);
+    } catch (error) {
+      console.error(`Error copying ${config.dir}:`, error);
+      throw error;
+    }
+  }
+
+  // Prune dev dependencies from packaged app
+  console.log('Pruning dev dependencies from packaged app...');
+  try {
+    const { stdout, stderr } = await execAsync('npm prune --production', {
+      cwd: appDir,
+      stdio: 'inherit'
     });
+    if (stdout) console.log(stdout);
+    if (stderr) console.error(stderr);
+    console.log('Dev dependencies pruned successfully');
+  } catch (error) {
+    console.error('Error pruning dev dependencies:', error);
+    throw error;
   }
 };
