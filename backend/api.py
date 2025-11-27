@@ -503,16 +503,15 @@ async def execute_dimension_tables_with_progress(parameters: dict, progress_call
         except Exception as e:
             logger.warning(f"Progress callback failed (likely cancelled): {e}")
         
-        img_base_path_prefix = (
-            "/squashfs-root" if sys.platform == "darwin" else "/squashfs-root/usr"
-        )
+        # Use relative URL path for images
+        img_url_path = "/site-packages/openafpm-cad-core/openafpm_cad_core/img/"
         
         tables = await loop.run_in_executor(
             None,
             get_dimension_tables,
             spreadsheet_document,
             App.listDocuments()["Alternator"],
-            f"{img_base_path_prefix}/Mod/openafpm-cad-core/openafpm_cad_core/img/"
+            img_url_path
         )
         
         try:
@@ -532,11 +531,9 @@ async def execute_dimension_tables_with_progress(parameters: dict, progress_call
 # Mount static file directories after API routes
 project_root = Path(__file__).parent.parent
 app.mount(
-    "/squashfs-root",
-    StaticFiles(
-        directory=str(project_root / "squashfs-root"), html=True, follow_symlink=True
-    ),
-    name="squashfs-root",
+    "/site-packages/openafpm-cad-core/openafpm_cad_core/img",
+    StaticFiles(directory=str(project_root / "site-packages" / "openafpm-cad-core" / "openafpm_cad_core" / "img")),
+    name="openafpm-images",
 )
 app.mount(
     "/node_modules",

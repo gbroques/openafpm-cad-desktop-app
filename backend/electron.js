@@ -5,8 +5,9 @@ const fs = require('node:fs');
 const http = require('http');
 const process = require('process');
 const { spawn } = require('child_process');
-const dotenv = require('dotenv');
 const portfinder = require('portfinder');
+const detectFreeCAD = require('./detectFreeCAD');
+const downloadFreeCAD = require('./downloadFreeCAD');
 
 async function tryWithExponentialBackoff(fn, predicate, mainWindow, maxTries = 8) {
   let result = await fn();
@@ -22,14 +23,25 @@ async function tryWithExponentialBackoff(fn, predicate, mainWindow, maxTries = 8
 
 async function withProgress(mainWindow, max, delay = 100, message = 'Spawning Python child process') {
   let tick = 0;
-  mainWindow.webContents.send('progress', {message, value: tick * delay , max});
+  const sendProgress = () => {
+    const value = tick * delay;
+    const percent = Math.round((value / max) * 100);
+    mainWindow.webContents.send('progress', {
+      message: `${message} ${percent}%`,
+      value,
+      max,
+      type: 'python'
+    });
+  };
+  
+  sendProgress();
   tick++;
   const intervalId = setInterval(() => {
-    mainWindow.webContents.send('progress', {message, value: tick * delay , max});
+    sendProgress();
     tick++;
   }, delay);
   await wait(max);
-  mainWindow.webContents.send('progress', {message, value: tick * delay , max});
+  sendProgress();
   clearInterval(intervalId);
 }
 
@@ -101,9 +113,30 @@ electronApp.on('window-all-closed', () => {
   }
 });
 
-function startApi(pythonPath, port) {
+function startApi(pythonPath, freecadLibPath, port) {
   const rootPath = path.join(__dirname, '..');
-  const options = { cwd: rootPath, stdio: 'inherit', windowsHide: true };
+  const sitePackagesPath = path.join(rootPath, 'site-packages');
+  // Add both the cloned repos and freecad-to-obj to PYTHONPATH
+  const pythonPathEnv = [
+    path.join(sitePackagesPath, 'openafpm-cad-core'),
+    path.join(sitePackagesPath, 'freecad-to-obj'),
+    sitePackagesPath
+  ].join(path.delimiter);
+  
+  const options = { 
+    cwd: rootPath, 
+    stdio: 'inherit', 
+    windowsHide: true,
+    env: { 
+      ...process.env, 
+      FREECAD_LIB: freecadLibPath,
+      PYTHONPATH: pythonPathEnv
+    }
+  };
+  console.log(`Starting Python backend:`);
+  console.log(`  Python: ${pythonPath}`);
+  console.log(`  FREECAD_LIB: ${freecadLibPath}`);
+  console.log(`  PYTHONPATH: ${pythonPathEnv}`);
   const transaction = new Transaction();
   const childProcess = spawn(pythonPath, ['-m', 'backend.api', '--port', port.toString()], options);
   childProcess.on('spawn', () => transaction.logStart('spawn', 'backend.api', 'pid', childProcess.pid));
@@ -113,7 +146,6 @@ function startApi(pythonPath, port) {
 }
 
 const rootPath = path.join(__dirname, '..');
-dotenv.config({ path: path.join(rootPath, '.env') });
 process.noAsar = true;
 
 nativeTheme.themeSource = 'light';
@@ -123,9 +155,62 @@ electronApp.whenReady()
   .then(async (window) => {
     createMenu(window);
     window.loadFile('loading.html');
+    
+    // Detect FreeCAD installation
+    let freecadPaths = await detectFreeCAD(
+      rootPath,
+      (message, value, max) => {
+        window.webContents.send('progress', {
+          message,
+          value,
+          max,
+          type: 'freecad'
+        });
+      }
+    );
+    
+    if (!freecadPaths) {
+      // Download FreeCAD
+      try {
+        await downloadFreeCAD(
+          '1.0.2',
+          electronApp.getPath('userData'),
+          (message, value, max) => {
+            window.webContents.send('progress', {
+              message,
+              value,
+              max,
+              type: 'freecad'
+            });
+          }
+        );
+        
+        // Detect again after download
+        freecadPaths = await detectFreeCAD(
+          rootPath,
+          (message, value, max) => {
+            window.webContents.send('progress', {
+              message,
+              value,
+              max,
+              type: 'freecad'
+            });
+          }
+        );
+        
+        if (!freecadPaths) {
+          throw new Error('Failed to detect FreeCAD after download');
+        }
+      } catch (error) {
+        console.error('FreeCAD download/setup failed:', error);
+        window.loadFile('fallback.html', { query: { error: error.message } });
+        return;
+      }
+    }
+    
     const port = await portfinder.getPortPromise({ port: 8000, stopPort: 65535 });
-    const pythonPath = path.join(rootPath, process.env.PYTHON);
-    const childProcess = startApi(pythonPath, port);
+    const pythonPath = freecadPaths.python;
+    const childProcess = startApi(pythonPath, freecadPaths.freecadLib, port);
     const url = `http://127.0.0.1:${port}/index.html`;
     const result = await tryWithExponentialBackoff(
       () => fetchIndexHtml(url),

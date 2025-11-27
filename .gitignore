@@ -1,10 +1,7 @@
 node_modules/
 .vscode/
 .env
-freecad.AppImage
-freecad.zip
-freecad.dmg
-squashfs-root/
 dist/
 __pycache__/
 .DS_Store
+site-packages/

@@ -4,13 +4,60 @@
     <meta charset="UTF-8">
     <title>OpenAFPM CAD</title>
     <style>
+      @font-face {
+        font-family: "Roboto";
+        src: url("font/Roboto-Light.ttf");
+        font-weight: 300;
+      }
+      @font-face {
+        font-family: "Roboto";
+        src: url("font/Roboto-Regular.ttf");
+        font-weight: 400;
+      }
+      @font-face {
+        font-family: "Roboto";
+        src: url("font/Roboto-Italic.ttf");
+        font-weight: 400;
+        font-style: italic;
+      }
+      @font-face {
+        font-family: "Roboto";
+        src: url("font/Roboto-Medium.ttf");
+        font-weight: 500;
+      }
+      @font-face {
+        font-family: "Roboto";
+        src: url("font/Roboto-Bold.ttf");
+        font-weight: 700;
+      }
+      :root {
+        --font-family: "Roboto";
+        --root-font-size: 16px;
+        --text-color: rgba(0, 0, 0, 0.87);
+        --background-default: #FFFFFF;
+        /**
+         * Typography based on modular scale factor of 1.2,
+         * also known as the Minor Third.
+         * @see {@link https://www.modularscale.com/?16&px&1.2}
+         */
+        --h1: 2.074rem;
+        --h2: 1.728rem;
+        --h3: 1.44rem;
+        --h4: 1.2rem;
+        --h5: 1rem;
+        --h6: 0.833rem;
+      }
       html {
-        font-size: 16px;
+        font-size: var(--root-font-size);
         overflow-y: scroll;
       }
       body {
+        color: var(--text-color);
+        background: var(--background-default);
         margin: 0;
-        font-family: sans-serif;
+        font-family: var(--font-family);
+        display: grid;
+        grid-template-rows: min-content 1fr;
       }
       html, body {
         height: 100%;
@@ -33,6 +80,22 @@
         justify-content: center;
         font-size: 1.2rem;
       }
+      #message {
+        text-align: center;
+        white-space: pre-line;
+        margin-top: 16px;
+        margin-bottom: 0;
+      }
+      .container p {
+        margin-top: 16px;
+        margin-bottom: 0;
+      }
+      .container svg {
+        margin-bottom: 16px;
+      }
+      #progress {
+        margin-top: 16px;
+      }
     </style>
 </head>
 <body>
@@ -40,18 +103,49 @@
     OpenAFPM CAD
   </header>
   <div class="container">
-    <p><span id="message">Loading</span> <span id="percent">0%</span></p>
+    <svg data-type="freecad" style="display: none; width: 128px; height: 128px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480" fill="none">
+      <path d="m400 80-80 80H160v60h80v80h-80v100l-80 80h81.008a13.996 13.996 0 0 0 13.311-9.674l14.48-44.565a13.993 13.993 0 0 1 8.992-8.982l11.131-3.617a14 14 0 0 1 12.557 1.984l37.9 27.543a14.01 14.01 0 0 0 16.464 0L309.815 418a13.991 13.991 0 0 0 5.085-15.648l-14.48-44.566a14.003 14.003 0 0 1 1.994-12.557l6.883-9.467a13.99 13.99 0 0 1 11.317-5.778l46.86.01a14.004 14.004 0 0 0 13.312-9.683l12.981-39.936a14.01 14.01 0 0 0-5.085-15.658l-37.91-27.543a13.98 13.98 0 0 1-5.767-11.317v-11.71c0-4.481 2.142-8.694 5.767-11.327l43.46-31.575A13.996 13.996 0 0 0 400 159.917Z" style="fill:#418fde;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:0;stroke-linecap:square;stroke-dasharray:none"/>
+      <path d="m320 0-80 80h80v80l80-80V0ZM80 320 0 400v80h80l80-80H80Z" style="display:inline;fill:#ff585d;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:0;stroke-linecap:square;stroke-dasharray:none"/>
+      <path d="M80 0 0 80v320l80-80V80h160l80-80Z" style="fill:#cb333b;fill-rule:evenodd;stroke-width:0;stroke-linecap:square;stroke:none;stroke-dasharray:none"/>
+      <path d="M80 400h80V300h80v-80h-80v-60h160V80H80Z" style="fill:#fff;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:0;stroke-linecap:square;stroke-dasharray:none"/>
+    </svg>
+    <svg data-type="python" style="display: none; width: 128px; height: 128px;" xmlns="http://www.w3.org/2000/svg" viewBox="0.21 -0.077 110 110">
+      <linearGradient id="a" x1="63.816" x2="118.493" y1="56.683" y2="1.823" gradientTransform="matrix(1 0 0 -1 -53.297 66.432)" gradientUnits="userSpaceOnUse">
+        <stop offset="0" style="stop-color:#387eb8"/>
+        <stop offset="1" style="stop-color:#366994"/>
+      </linearGradient>
+      <path fill="url(#a)" d="M55.023-.077c-25.971 0-26.25 10.081-26.25 12.156v12.594h26.75v3.781H18.148C10.199 28.454.21 33.287.21 54.704c0 19.673 7.792 27.281 15.656 27.281h9.344V68.86c0-5.491 2.721-15.656 15.406-15.656h26.531c3.902 0 14.906-1.696 14.906-14.406V14.579c.001-3.153-.538-14.656-27.03-14.656zm-14.75 8.469a4.807 4.807 0 0 1 4.813 4.813c0 2.661-2.151 4.813-4.813 4.813s-4.813-2.151-4.813-4.813a4.807 4.807 0 0 1 4.813-4.813z"/>
+      <linearGradient id="b" x1="97.044" x2="155.667" y1="21.632" y2="-34.531" gradientTransform="matrix(1 0 0 -1 -53.297 66.432)" gradientUnits="userSpaceOnUse">
+        <stop offset="0" style="stop-color:#ffe052"/>
+        <stop offset="1" style="stop-color:#ffc331"/>
+      </linearGradient>
+      <path fill="url(#b)" d="M55.397 109.923c25.959 0 26.282-10.271 26.282-12.156V85.173H54.897v-3.781h37.375c8.009 0 17.938-4.954 17.938-26.25 0-23.322-10.538-27.281-15.656-27.281H85.21v13.125c0 5.491-2.631 15.656-15.406 15.656H43.272c-3.892 0-14.906 1.896-14.906 14.406v24.219c0 5.23 3.196 14.656 27.031 14.656zm14.751-8.469c-2.662 0-4.813-2.151-4.813-4.813s2.15-4.813 4.813-4.813c2.661 0 4.813 2.151 4.813 4.813s-2.152 4.813-4.813 4.813z"/>
+    </svg>
+    <p id="message">Loading</p>
+    <p data-type="freecad" style="display: none; font-size: var(--h6);">First-time setup (this only happens once)</p>
     <progress id="progress"></progress>
   </div>
   <script>
     const progress = document.getElementById('progress');
-    const percent = document.getElementById('percent');
     const message = document.getElementById('message');
-    window.electronAPI.onProgress(({message: msg, value, max}) => {
+    
+    window.electronAPI.onProgress(({message: msg, value, max, type}) => {
       if (msg) message.innerText = msg;
-      progress.value = value;
-      progress.max = max;
-      percent.innerText = `${Math.round((value / max) * 100)}%`;
+      
+      // Show/hide elements based on type
+      document.querySelectorAll('[data-type]').forEach(el => {
+        el.style.display = el.dataset.type === type ? 'block' : 'none';
+      });
+      
+      if (max === 0 || max === null || max === undefined) {
+        // Indeterminate - remove value attribute to show pulsing animation
+        progress.removeAttribute('value');
+        progress.removeAttribute('max');
+      } else {
+        // Determinate - set value and max
+        progress.value = value;
+        progress.max = max;
+      }
     });
   </script>
 </body>
