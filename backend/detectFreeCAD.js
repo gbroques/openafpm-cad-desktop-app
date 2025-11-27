@@ -274,28 +274,38 @@ function compareVersions(a, b) {
  */
 function updateEnvFile(rootPath, pythonPath, freecadLibPath) {
   const envPath = path.join(rootPath, '.env');
-  let lines = [];
   
-  if (fs.existsSync(envPath)) {
-    lines = fs.readFileSync(envPath, 'utf8').split('\n');
-  }
-  
-  const updated = { PYTHON: false, FREECAD_LIB: false };
-  
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].startsWith('PYTHON=')) {
-      lines[i] = `PYTHON=${pythonPath}`;
-      updated.PYTHON = true;
-    } else if (lines[i].startsWith('FREECAD_LIB=')) {
-      lines[i] = `FREECAD_LIB=${freecadLibPath}`;
-      updated.FREECAD_LIB = true;
+  // Skip writing .env in production (e.g., AppImage where filesystem is read-only)
+  // The .env file is only useful for development
+  try {
+    let lines = [];
+    
+    if (fs.existsSync(envPath)) {
+      lines = fs.readFileSync(envPath, 'utf8').split('\n');
+    }
+    
+    const updated = { PYTHON: false, FREECAD_LIB: false };
+    
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith('PYTHON=')) {
+        lines[i] = `PYTHON=${pythonPath}`;
+        updated.PYTHON = true;
+      } else if (lines[i].startsWith('FREECAD_LIB=')) {
+        lines[i] = `FREECAD_LIB=${freecadLibPath}`;
+        updated.FREECAD_LIB = true;
+      }
+    }
+    
+    if (!updated.PYTHON) lines.push(`PYTHON=${pythonPath}`);
+    if (!updated.FREECAD_LIB) lines.push(`FREECAD_LIB=${freecadLibPath}`);
+    
+    fs.writeFileSync(envPath, lines.join('\n'));
+  } catch (error) {
+    // Ignore write errors in production (read-only filesystem)
+    if (error.code !== 'EROFS') {
+      console.warn('Failed to update .env file:', error.message);
     }
   }
-  
-  if (!updated.PYTHON) lines.push(`PYTHON=${pythonPath}`);
-  if (!updated.FREECAD_LIB) lines.push(`FREECAD_LIB=${freecadLibPath}`);
-  
-  fs.writeFileSync(envPath, lines.join('\n'));
 }
 
 module.exports = detectFreeCAD;
