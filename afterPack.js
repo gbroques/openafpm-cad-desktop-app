@@ -9,7 +9,11 @@
  * Solution: Manually copy node_modules and site-packages using platform-specific
  * commands (rsync on Unix, robocopy on Windows), preserving yarn's flat structure
  * while excluding unnecessary files (.git directories, platform-specific binaries,
- * source files). Then prune dev dependencies from the packaged app.
+ * source files).
+ * 
+ * Additionally:
+ * - Replace symlinks in site-packages with real clones for distribution
+ * - Prune dev dependencies from the packaged app
  */
 const path = require('path');
 const fs = require('fs');
@@ -66,6 +70,27 @@ exports.default = async function(context) {
     } catch (error) {
       console.error(`Error copying ${config.dir}:`, error);
       throw error;
+    }
+  }
+
+  // Replace symlinks with real clones in site-packages
+  const sitePackagesDir = path.join(appDir, 'site-packages');
+  const repos = [
+    { name: 'openafpm-cad-core', url: 'https://github.com/gbroques/openafpm-cad-core.git' },
+    { name: 'freecad-to-obj', url: 'https://github.com/gbroques/freecad-to-obj.git' }
+  ];
+  
+  for (const repo of repos) {
+    const repoPath = path.join(sitePackagesDir, repo.name);
+    
+    if (fs.existsSync(repoPath)) {
+      const stats = fs.lstatSync(repoPath);
+      
+      if (stats.isSymbolicLink()) {
+        console.log(`Replacing symlink ${repo.name} with real clone...`);
+        fs.unlinkSync(repoPath);
+        await execAsync(`git clone --depth 1 ${repo.url} "${repoPath}"`, { stdio: 'inherit' });
+      }
     }
   }
 

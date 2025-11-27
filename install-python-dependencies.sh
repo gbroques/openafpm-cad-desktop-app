@@ -3,7 +3,9 @@
 # Install Python dependencies
 # ===========================
 # Downloads FreeCAD if not present to use its bundled Python interpreter.
-# Clones openafpm-cad-core and freecad-to-obj repositories.
+# Creates symlinks to ../openafpm-cad-core and ../freecad-to-obj if they exist (for local development).
+# Otherwise clones repositories from GitHub.
+# Symlinks are replaced with real clones during packaging (see afterPack.js).
 # Installs fastapi and uvicorn to site-packages/ using FreeCAD's Python.
 
 # Exit on error. 
@@ -94,16 +96,28 @@ validate_command_exists git
 
 site_packages_dir="site-packages"
 
-if [ ! -d "$site_packages_dir/openafpm-cad-core" ]; then
-  echo "Downloading openafpm-cad-core module."
-  git clone --depth 1 https://github.com/gbroques/openafpm-cad-core.git "$site_packages_dir/openafpm-cad-core"
+# openafpm-cad-core
+if [ ! -e "$site_packages_dir/openafpm-cad-core" ]; then
+  if [ -d "../openafpm-cad-core" ]; then
+    echo "Creating symlink to ../openafpm-cad-core for local development."
+    ln -s "$(cd ../openafpm-cad-core && pwd)" "$site_packages_dir/openafpm-cad-core"
+  else
+    echo "Downloading openafpm-cad-core module."
+    git clone --depth 1 https://github.com/gbroques/openafpm-cad-core.git "$site_packages_dir/openafpm-cad-core"
+  fi
 else
   echo "openafpm-cad-core module already exists."
 fi
 
-if [ ! -d "$site_packages_dir/freecad-to-obj" ]; then
-  echo "Downloading freecad-to-obj module."
-  git clone --depth 1 https://github.com/gbroques/freecad-to-obj.git "$site_packages_dir/freecad-to-obj"
+# freecad-to-obj
+if [ ! -e "$site_packages_dir/freecad-to-obj" ]; then
+  if [ -d "../freecad-to-obj" ]; then
+    echo "Creating symlink to ../freecad-to-obj for local development."
+    ln -s "$(cd ../freecad-to-obj && pwd)" "$site_packages_dir/freecad-to-obj"
+  else
+    echo "Downloading freecad-to-obj module."
+    git clone --depth 1 https://github.com/gbroques/freecad-to-obj.git "$site_packages_dir/freecad-to-obj"
+  fi
 else
   echo "freecad-to-obj module already exists."
 fi
