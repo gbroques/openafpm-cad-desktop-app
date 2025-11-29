@@ -41,7 +41,7 @@ jobs:
           key: freecad-${{ runner.os }}-1.0.2
       
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --cache-folder .yarn-cache
       
       - name: Install Python dependencies
         run: ./install-python-dependencies.sh
@@ -123,7 +123,7 @@ jobs:
           key: freecad-${{ runner.os }}-1.0.2
       
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --cache-folder .yarn-cache
       
       - name: Install Python dependencies
         shell: bash
