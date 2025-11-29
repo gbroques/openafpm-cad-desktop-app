@@ -73,24 +73,46 @@ exports.default = async function(context) {
     }
   }
 
-  // Replace symlinks with real clones in site-packages
+  // Replace symlinks with real pip installs in site-packages
   const sitePackagesDir = path.join(appDir, 'site-packages');
+  
+  // Read version from install-python-dependencies.sh
+  const installScript = fs.readFileSync(path.join(__dirname, 'install-python-dependencies.sh'), 'utf8');
+  const versionMatch = installScript.match(/OPENAFPM_CAD_CORE_VERSION="([^"]+)"/);
+  const coreVersion = versionMatch ? versionMatch[1] : 'master';
+  
   const repos = [
-    { name: 'openafpm-cad-core', url: 'https://github.com/gbroques/openafpm-cad-core.git' },
-    { name: 'freecad-to-obj', url: 'https://github.com/gbroques/freecad-to-obj.git' }
+    { 
+      name: 'openafpm_cad_core',
+      pipUrl: `git+https://github.com/gbroques/openafpm-cad-core.git@${coreVersion}`
+    }
   ];
   
+  // Find Python path
+  const pythonPath = process.env.PYTHON_PATH || 'python3';
+  
   for (const repo of repos) {
-    const repoPath = path.join(sitePackagesDir, repo.name);
+    const packagePath = path.join(sitePackagesDir, repo.name);
     
-    if (fs.existsSync(repoPath)) {
-      const stats = fs.lstatSync(repoPath);
+    if (fs.existsSync(packagePath)) {
+      const stats = fs.lstatSync(packagePath);
       
       if (stats.isSymbolicLink()) {
-        console.log(`Replacing symlink ${repo.name} with real clone...`);
-        fs.unlinkSync(repoPath);
-        await execAsync(`git clone --depth 1 ${repo.url} "${repoPath}"`, { stdio: 'inherit' });
+        console.log(`Replacing symlink ${repo.name} with pip install...`);
+        fs.unlinkSync(packagePath);
+        
+        await execAsync(`"${pythonPath}" -m pip install --target "${sitePackagesDir}" "${repo.pipUrl}"`);
       }
+    }
+  }
+  
+  // Also remove freecad_to_obj symlink if it exists (will be installed as dependency)
+  const freecadToObjPath = path.join(sitePackagesDir, 'freecad_to_obj');
+  if (fs.existsSync(freecadToObjPath)) {
+    const stats = fs.lstatSync(freecadToObjPath);
+    if (stats.isSymbolicLink()) {
+      console.log('Removing freecad_to_obj symlink (will be installed as dependency)...');
+      fs.unlinkSync(freecadToObjPath);
     }
   }
 
