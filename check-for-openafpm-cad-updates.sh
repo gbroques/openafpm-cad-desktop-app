@@ -126,7 +126,7 @@ echo "Getting download link..."
 DOWNLOAD_LINK=$(./get-latest-linux-artifact-link.sh)
 
 # Compose email
-EMAIL_SUBJECT="OpenAFPM CAD $(date +%Y-%m-%d) Update: $(IFS=', '; echo "${CHANGED[*]}")"
+EMAIL_SUBJECT="OpenAFPM CAD $(date +%Y-%m-%d) Update"
 EMAIL_BODY="New build available:\n$DOWNLOAD_LINK\n\n$COMMIT_LOGS"
 
 # Create temporary file for editing
