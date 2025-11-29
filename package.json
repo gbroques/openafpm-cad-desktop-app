@@ -27,7 +27,7 @@
   "build": {
     "appId": "openafpm-cad-desktop-app",
     "asar": false,
-    "artifactName": "${name}-${version}-${os}-${arch}.${ext}",
+    "artifactName": "${name}-${version}-${env.BUILD_DATE}-${os}-${arch}.${ext}",
     "publish": null,
     "files": [
       "**/*",

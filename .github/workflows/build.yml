@@ -49,6 +49,9 @@ jobs:
       - name: Build
         run: npm run pack
       
+      - name: Set build date
+        run: echo "BUILD_DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
+      
       - name: Package
         run: npm run dist
       
@@ -131,6 +134,9 @@ jobs:
       
       - name: Build
         run: npm run pack
+      
+      - name: Set build date
+        run: echo "BUILD_DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
       
       - name: Package
         run: npm run dist
