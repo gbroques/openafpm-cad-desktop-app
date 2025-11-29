@@ -45,6 +45,32 @@ exports.default = async function(context) {
     fs.readdirSync(appOutDir, { recursive: true }).find(p => p.endsWith('/app') || p.endsWith('\\app'))
   );
 
+  // Replace symlinks with real pip installs in SOURCE site-packages BEFORE copying
+  const sourceSitePackagesDir = path.join(__dirname, 'site-packages');
+  
+  // Check if there are any symlinks that need to be replaced
+  const hasSymlinks = ['openafpm_cad_core', 'freecad_to_obj'].some(name => {
+    const packagePath = path.join(sourceSitePackagesDir, name);
+    return fs.existsSync(packagePath) && fs.lstatSync(packagePath).isSymbolicLink();
+  });
+  
+  if (hasSymlinks) {
+    console.log('Found symlinks in site-packages, replacing with real installs...');
+    
+    // Remove symlinks
+    for (const name of ['openafpm_cad_core', 'freecad_to_obj']) {
+      const packagePath = path.join(sourceSitePackagesDir, name);
+      if (fs.existsSync(packagePath) && fs.lstatSync(packagePath).isSymbolicLink()) {
+        console.log(`Removing symlink: ${name}`);
+        fs.unlinkSync(packagePath);
+      }
+    }
+    
+    // Run install script which will clone and install from git
+    console.log('Running install-python-dependencies.sh to install from git...');
+    await execAsync('./install-python-dependencies.sh', { cwd: __dirname });
+  }
+
   const copyConfigs = [
     {
       dir: 'node_modules',
@@ -70,49 +96,6 @@ exports.default = async function(context) {
     } catch (error) {
       console.error(`Error copying ${config.dir}:`, error);
       throw error;
-    }
-  }
-
-  // Replace symlinks with real pip installs in site-packages
-  const sitePackagesDir = path.join(appDir, 'site-packages');
-  
-  // Read version from install-python-dependencies.sh
-  const installScript = fs.readFileSync(path.join(__dirname, 'install-python-dependencies.sh'), 'utf8');
-  const versionMatch = installScript.match(/OPENAFPM_CAD_CORE_VERSION="([^"]+)"/);
-  const coreVersion = versionMatch ? versionMatch[1] : 'master';
-  
-  const repos = [
-    { 
-      name: 'openafpm_cad_core',
-      pipUrl: `git+https://github.com/gbroques/openafpm-cad-core.git@${coreVersion}`
-    }
-  ];
-  
-  // Find Python path
-  const pythonPath = process.env.PYTHON_PATH || 'python3';
-  
-  for (const repo of repos) {
-    const packagePath = path.join(sitePackagesDir, repo.name);
-    
-    if (fs.existsSync(packagePath)) {
-      const stats = fs.lstatSync(packagePath);
-      
-      if (stats.isSymbolicLink()) {
-        console.log(`Replacing symlink ${repo.name} with pip install...`);
-        fs.unlinkSync(packagePath);
-        
-        await execAsync(`"${pythonPath}" -m pip install --target "${sitePackagesDir}" "${repo.pipUrl}"`);
-      }
-    }
-  }
-  
-  // Also remove freecad_to_obj symlink if it exists (will be installed as dependency)
-  const freecadToObjPath = path.join(sitePackagesDir, 'freecad_to_obj');
-  if (fs.existsSync(freecadToObjPath)) {
-    const stats = fs.lstatSync(freecadToObjPath);
-    if (stats.isSymbolicLink()) {
-      console.log('Removing freecad_to_obj symlink (will be installed as dependency)...');
-      fs.unlinkSync(freecadToObjPath);
     }
   }
 
