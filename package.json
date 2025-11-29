@@ -17,7 +17,7 @@
     "@material/web": "^2.2.0",
     "express": "^4.21.2",
     "lit": "^3.2.1",
-    "openafpm-cad-visualization": "git+https://github.com/gbroques/openafpm-cad-visualization.git#31a4b0555f466394a40b9e1f7f68df6388e16db6",
+    "openafpm-cad-visualization": "git+https://github.com/gbroques/openafpm-cad-visualization.git#1dcd63aba117e64ec3f80291b58e5624cb710b2d",
     "portfinder": "^1.0.32"
   },
   "devDependencies": {

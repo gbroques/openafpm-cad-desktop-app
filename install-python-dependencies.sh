@@ -100,7 +100,7 @@ site_packages_dir="site-packages"
 mkdir -p "$site_packages_dir"
 
 # Version pin for openafpm-cad-core
-OPENAFPM_CAD_CORE_VERSION="e99e6c0a07f457e4cbb59ec271b03d939a8d8e42"
+OPENAFPM_CAD_CORE_VERSION="c47a90c9a4f561483225c991abf43e413878a299"
 
 # openafpm-cad-core (and its dependency freecad-to-obj)
 if [ ! -e "$site_packages_dir/openafpm_cad_core" ]; then
