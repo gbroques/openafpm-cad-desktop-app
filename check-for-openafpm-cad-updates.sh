@@ -78,7 +78,7 @@ COMMIT_LOGS=""
 if [ "$LATEST_CORE" != "$CURRENT_CORE" ]; then
   echo "Fetching commit log for openafpm-cad-core..."
   CORE_LOG=$(gh api "repos/gbroques/openafpm-cad-core/compare/$CURRENT_CORE...$LATEST_CORE" --jq '.commits[] | "- \(.commit.message | split("\n")[0])"')
-  COMMIT_LOGS+="openafpm-cad-core changes:\n$CORE_LOG\n\n"
+  COMMIT_LOGS+="CAD changes:\n$CORE_LOG\n\n"
   CHANGED+=("openafpm-cad-core@${LATEST_CORE:0:7}")
   
   echo "Updating openafpm-cad-core..."
@@ -89,7 +89,7 @@ fi
 if [ "$LATEST_VIZ" != "$CURRENT_VIZ" ]; then
   echo "Fetching commit log for openafpm-cad-visualization..."
   VIZ_LOG=$(gh api "repos/gbroques/openafpm-cad-visualization/compare/$CURRENT_VIZ...$LATEST_VIZ" --jq '.commits[] | "- \(.commit.message | split("\n")[0])"')
-  COMMIT_LOGS+="openafpm-cad-visualization changes:\n$VIZ_LOG\n\n"
+  COMMIT_LOGS+="Visualization changes:\n$VIZ_LOG\n\n"
   CHANGED+=("openafpm-cad-visualization@${LATEST_VIZ:0:7}")
   
   echo "Updating openafpm-cad-visualization..."
@@ -120,11 +120,23 @@ gh run watch "$RUN_ID"
 echo "Getting download link..."
 DOWNLOAD_LINK=$(./get-latest-linux-artifact-link.sh)
 
-# Compose and send email
-EMAIL_SUBJECT="OpenAFPM CAD Update: $(IFS=', '; echo "${CHANGED[*]}")"
+# Compose email
+EMAIL_SUBJECT="OpenAFPM CAD $(date +%Y-%m-%d) Update: $(IFS=', '; echo "${CHANGED[*]}")"
 EMAIL_BODY="New build available:\n$DOWNLOAD_LINK\n\n$COMMIT_LOGS"
 
+# Create temporary file for editing
+TEMP_EMAIL=$(mktemp)
+echo -e "Subject: $EMAIL_SUBJECT\nTo: $RECIPIENT_EMAIL\nCc: $SENDER_EMAIL\n\n$EMAIL_BODY" > "$TEMP_EMAIL"
+
+# Open in nvim for editing
+echo "Opening email in nvim for editing..."
+nvim "$TEMP_EMAIL"
+
+# Send email
 echo "Sending email..."
-echo -e "Subject: $EMAIL_SUBJECT\nTo: $RECIPIENT_EMAIL\nCc: $SENDER_EMAIL\n\n$EMAIL_BODY" | msmtp -t
+msmtp -t < "$TEMP_EMAIL"
+
+# Clean up
+rm "$TEMP_EMAIL"
 
 echo "✓ Email sent to $RECIPIENT_EMAIL (CC: $SENDER_EMAIL)"
