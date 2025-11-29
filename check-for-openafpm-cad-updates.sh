@@ -30,14 +30,14 @@
 #    - Generate app password for "Mail"
 #    - Use that password in ~/.msmtprc
 #
-# 5. Set environment variables (add to ~/.bashrc or ~/.profile):
-#    export OPENAFPM_SENDER_EMAIL="your-email@gmail.com"
-#    export OPENAFPM_RECIPIENT_EMAIL="recipient@example.com"
-#
 # Usage:
 #    ./check-for-openafpm-cad-updates.sh
 #
 set -e
+
+# Email configuration
+SENDER_EMAIL="groques360@gmail.com"
+RECIPIENT_EMAIL="latoufis@power.ece.ntua.gr"
 
 # Check if gh is installed
 if ! command -v gh >/dev/null 2>&1; then
@@ -52,20 +52,6 @@ if ! gh auth status >/dev/null 2>&1; then
   echo "Run: gh auth login" >&2
   exit 1
 fi
-
-# Check required environment variables
-if [ -z "$OPENAFPM_SENDER_EMAIL" ]; then
-  echo "Error: OPENAFPM_SENDER_EMAIL environment variable not set"
-  exit 1
-fi
-
-if [ -z "$OPENAFPM_RECIPIENT_EMAIL" ]; then
-  echo "Error: OPENAFPM_RECIPIENT_EMAIL environment variable not set"
-  exit 1
-fi
-
-SENDER_EMAIL="$OPENAFPM_SENDER_EMAIL"
-RECIPIENT_EMAIL="$OPENAFPM_RECIPIENT_EMAIL"
 
 echo "Checking for OpenAFPM CAD updates..."
 
