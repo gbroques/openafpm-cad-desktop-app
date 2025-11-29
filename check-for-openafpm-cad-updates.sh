@@ -114,7 +114,12 @@ echo "Pushed: $COMMIT_MSG"
 # Wait for build to complete
 echo "Waiting for GitHub Actions build to complete..."
 RUN_ID=$(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')
-gh run watch "$RUN_ID"
+if ! gh run watch "$RUN_ID"; then
+  BUILD_URL=$(gh run view "$RUN_ID" --json url --jq '.url')
+  echo "Error: Build failed" >&2
+  echo "Debug at: $BUILD_URL" >&2
+  exit 1
+fi
 
 # Get download link
 echo "Getting download link..."
